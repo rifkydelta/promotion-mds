@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promo Searcher - Matahari</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #f4f7f6;
+            --bg-card: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #636e72;
+            --text-sku: #555555;
+            --border-pink: #d81b60;
+            --bg-period: #fff9c4;
+            --text-period: #f57f17;
+            --input-bg: #ffffff;
+            --input-border: #d81b60;
+            --shadow: rgba(0,0,0,0.1);
+            --status-aktif: #27ae60;
+            --status-non: #e74c3c;
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #b0b0b0;
+            --text-sku: #999999;
+            --border-pink: #ff4081;
+            --bg-period: #332b00;
+            --text-period: #ffeb3b;
+            --input-bg: #2d2d2d;
+            --input-border: #ff4081;
+            --shadow: rgba(0,0,0,0.4);
+        }
+
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: var(--bg-body); 
+            color: var(--text-main); 
+            padding: 20px; 
+            transition: background 0.3s, color 0.3s;
+            padding-bottom: 100px;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; }
+        .header-app { text-align: center; margin-bottom: 25px; }
+
+        /* Tombol Toggle & Database di Bawah */
+        .controls-bottom {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            display: flex; gap: 10px; z-index: 1000; flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-float {
+            background: var(--bg-card); border: 2px solid var(--input-border);
+            color: var(--text-main); padding: 10px 16px; border-radius: 30px;
+            cursor: pointer; font-size: 13px; font-weight: bold;
+            box-shadow: 0 4px 12px var(--shadow); display: flex; align-items: center; gap: 8px;
+        }
+
+        .search-box { 
+            width: 100%; padding: 15px; font-size: 16px; 
+            border: 2px solid var(--input-border); border-radius: 12px; 
+            box-sizing: border-box; outline: none; background: var(--input-bg);
+            color: var(--text-main); box-shadow: 0 4px 10px var(--shadow);
+        }
+
+        #status { font-size: 13px; color: var(--text-muted); margin: 15px 0; text-align: center; }
+        
+        /* Modal Style */
+        .modal {
+            display: none; position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: var(--bg-card); margin: 15% auto;
+            padding: 20px; border-radius: 15px; width: 85%; max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--text-muted); padding-bottom: 10px; }
+        .file-list { margin-top: 15px; list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+        .file-item { padding: 10px; border-bottom: 1px solid var(--shadow); font-size: 13px; display: flex; align-items: center; gap: 10px; }
+
+        /* Overlay Awal */
+        #divisionOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-body); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        /* Card Style */
+        .card { background: var(--bg-card); border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 10px var(--shadow); border-top: 4px solid var(--border-pink); }
+        .sku-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .sku-text { font-size: 13px; color: var(--text-sku); font-weight: bold; }
+        .brand-text { color: var(--border-pink); font-weight: normal; }
+        .badge-acara { background: #fce4ec; color: #ad1457; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .article-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+        .description { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+        .period-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .period-box { background: var(--bg-period); color: var(--text-period); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .status-label { font-size: 11px; font-weight: 900; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid currentColor; }
+        .status-aktif { color: var(--status-aktif); }
+        .status-non { color: var(--status-non); }
+        .price-container { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; border-top: 1px dashed var(--text-muted); }
+        .price-promo { font-size: 24px; font-weight: 800; color: #ff2b2b; }
+        .price-normal { text-decoration: line-through; color: var(--text-muted); font-size: 14px; }
+        .discount-tag { color: var(--border-pink); font-weight: bold; font-size: 18px; }
+        .loading-progress { height: 4px; background: var(--border-pink); width: 0%; transition: width 0.3s; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="divisionOverlay">
+    <h2 style="margin-bottom:30px;">Pilih Divisi Matahari</h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:400px; width:90%;">
+        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(1)">DIVISI 1</button>
+        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(2)">DIVISI 2</button>
+        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(3)">DIVISI 3</button>
+        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(4)">DIVISI 4</button>
+    </div>
+</div>
+
+<div class="controls-bottom">
+    <button id="themeToggle" class="btn-float">🌙 Mode Gelap</button>
+    <button onclick="document.getElementById('divisionOverlay').style.display='flex'" class="btn-float">🏢 Ganti Divisi</button>
+    <button id="dbToggle" class="btn-float">📁 Database</button>
+</div>
+
+<div id="dbModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin:0">Database Terpasang</h3>
+            <span id="closeModal" style="cursor:pointer; font-size:24px;">&times;</span>
+        </div>
+        <ul id="fileListContainer" class="file-list"></ul>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header-app">
+        <h2>Katalog Promo Matahari</h2>
+        <div id="loadingBar" class="loading-progress"></div>
+        <div id="status">Silahkan pilih divisi...</div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
+    <div id="results"></div>
+</div>
+
+<script>
+    let allData = [];
+    let EXCEL_FILES = [];
+    let selectedDiv = null;
+
+    const themeToggle = document.getElementById('themeToggle');
+    const dbToggle = document.getElementById('dbToggle');
+    const dbModal = document.getElementById('dbModal');
+    const closeModal = document.getElementById('closeModal');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const searchInput = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('results');
+    const statusText = document.getElementById('status');
+    const loadingBar = document.getElementById('loadingBar');
+
+    // 1. PEMILIHAN DIVISI
+    async function selectDivision(num) {
+        selectedDiv = num;
+        allData = []; // Reset data
+        resultsContainer.innerHTML = '';
+        searchInput.value = '';
+        loadingBar.style.width = '0%';
+        
+        document.getElementById('divisionOverlay').style.display = 'none';
+        statusText.innerText = `Memuat data Divisi ${num}...`;
+        await initData();
+    }
+
+    // 2. AMBIL DAFTAR FILE
+    async function getExcelList() {
+        try {
+            const path = `database/${selectedDiv}/list_files.json`;
+            const response = await fetch(path);
+            if (!response.ok) throw new Error('JSON tidak ditemukan');
+            const files = await response.json();
+            EXCEL_FILES = files.map(file => `database/${selectedDiv}/${file}`);
+            return EXCEL_FILES;
+        } catch (e) {
+            statusText.innerText = `❌ Gagal memuat daftar Divisi ${selectedDiv}.`;
+            return [];
+        }
+    }
+
+    // 3. LOGIKA DATA
+    function formatDiscount(val) {
+        if (val === undefined || val === null) return "-";
+        const num = parseFloat(val);
+        if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
+        if (!isNaN(num) && num >= 1) return num + "%";
+        return val;
+    }
+
+    const rp = (v) => {
+        if (!v) return '-';
+        let valStr = String(v).trim();
+        // Cek jika mengandung huruf (seperti B1G1)
+        if (/[a-zA-Z]/.test(valStr)) return valStr;
+        
+        let numericOnly = valStr.replace(/[^0-9]/g, "");
+        if (numericOnly === "") return valStr;
+        return 'Rp ' + Number(numericOnly).toLocaleString('id-ID');
+    };
+
+    function parseToDate(val) {
+        if (!val) return null;
+        let d = (typeof val === 'number') ? new Date((val - 25569) * 86400 * 1000) : new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDisplayDate(dateObj) {
+        if (!dateObj) return "-";
+        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+        return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+    }
+
+    async function initData() {
+        const filesToLoad = await getExcelList();
+        if (filesToLoad.length === 0) return;
+
+        let loaded = 0;
+        for (const file of filesToLoad) {
+            try {
+                const resp = await fetch(file);
+                if (!resp.ok) continue;
+                const buf = await resp.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                wb.SheetNames.forEach(sn => {
+                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                    allData = allData.concat(data);
+                });
+                loaded++;
+                loadingBar.style.width = `${(loaded / filesToLoad.length) * 100}%`;
+                statusText.innerText = `Divisi ${selectedDiv}: ${loaded}/${filesToLoad.length} file...`;
+            } catch (e) { console.error(e); }
+        }
+        statusText.innerText = `✅ Divisi ${selectedDiv}: ${allData.length} data siap.`;
+        searchInput.disabled = false;
+        searchInput.focus();
+    }
+
+    // 4. PENCARIAN
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        resultsContainer.innerHTML = '';
+        if (query.length < 3) return;
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const filtered = allData.filter(item => {
+            const s = String(item.SKU || '').toLowerCase();
+            const a = String(item.ARTICLE || '').toLowerCase();
+            const d = String(item.DESCRIPTION || '').toLowerCase();
+            const b = String(item.BRAND || '').toLowerCase();
+            return s.includes(query) || a.includes(query) || d.includes(query) || b.includes(query);
+        }).slice(0, 60);
+
+        filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
+            const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
+            
+            let statusHtml = '';
+            if (fromDate && toDate) {
+                const isActive = today >= fromDate && today <= toDate;
+                statusHtml = isActive ? '<span class="status-label status-aktif">● Aktif</span>' : '<span class="status-label status-non">● Non-Aktif</span>';
+            }
+
+            const promoPrice = item['HARGA PROMO'] || item[' HARGA PROMO '];
+            const isRawText = /[a-zA-Z]/.test(String(promoPrice));
+
+            card.innerHTML = `
+                <div class="sku-row">
+                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ''}</div>
+                    <div class="badge-acara">${item.ACARA || 'PROMO'}</div>
+                </div>
+                <div class="article-name">${item.ARTICLE || 'Tanpa Nama Artikel'}</div>
+                <div class="description">${item.DESCRIPTION || ''}</div>
+                <div class="period-row">
+                    <div class="period-box">📅 ${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}</div>
+                    ${statusHtml}
+                </div>
+                <div class="price-container">
+                    <div>
+                        <div class="price-normal">${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}</div>
+                        <div class="price-promo" style="${isRawText ? 'font-size: 16px;' : ''}">${rp(promoPrice)}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
+                        <div class="discount-tag">${formatDiscount(item.DISKON)}</div>
+                    </div>
+                </div>
+            `;
+            resultsContainer.appendChild(card);
+        });
+    });
+
+    // 5. TEMA & MODAL
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.innerHTML = savedTheme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const target = isDark ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', target);
+        localStorage.setItem('theme', target);
+        themeToggle.innerHTML = target === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
+    });
+
+    dbToggle.addEventListener('click', () => {
+        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">📄 ${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong</li>';
+        dbModal.style.display = "block";
+    });
+
+    closeModal.onclick = () => dbModal.style.display = "none";
+    window.onclick = (e) => { if(e.target == dbModal) dbModal.style.display = "none"; }
+
+    initTheme();
+</script>
+</body>
+</html>
