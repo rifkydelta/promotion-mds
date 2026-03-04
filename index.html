@@ -42,7 +42,7 @@
             color: var(--text-main); 
             padding: 20px; 
             transition: background 0.3s, color 0.3s;
-            padding-bottom: 100px;
+            padding-bottom: 80px;
         }
 
         .container { max-width: 800px; margin: 0 auto; }
@@ -50,15 +50,14 @@
 
         /* Tombol Toggle & Database di Bawah */
         .controls-bottom {
-            position: fixed; bottom: 20px; left: 20px; right: 20px;
-            display: flex; gap: 10px; z-index: 1000; flex-wrap: wrap;
-            justify-content: center;
+            position: fixed; bottom: 20px; left: 20px; 
+            display: flex; gap: 10px; z-index: 1000;
         }
 
         .btn-float {
             background: var(--bg-card); border: 2px solid var(--input-border);
             color: var(--text-main); padding: 10px 16px; border-radius: 30px;
-            cursor: pointer; font-size: 13px; font-weight: bold;
+            cursor: pointer; font-size: 14px; font-weight: bold;
             box-shadow: 0 4px 12px var(--shadow); display: flex; align-items: center; gap: 8px;
         }
 
@@ -71,7 +70,7 @@
 
         #status { font-size: 13px; color: var(--text-muted); margin: 15px 0; text-align: center; }
         
-        /* Modal Style */
+        /* Modal Daftar File */
         .modal {
             display: none; position: fixed; z-index: 2000;
             left: 0; top: 0; width: 100%; height: 100%;
@@ -79,21 +78,15 @@
         }
         .modal-content {
             background-color: var(--bg-card); margin: 15% auto;
-            padding: 20px; border-radius: 15px; width: 85%; max-width: 500px;
+            padding: 20px; border-radius: 15px; width: 80%; max-width: 500px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--text-muted); padding-bottom: 10px; }
-        .file-list { margin-top: 15px; list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
-        .file-item { padding: 10px; border-bottom: 1px solid var(--shadow); font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        .file-list { margin-top: 15px; list-style: none; padding: 0; }
+        .file-item { padding: 10px; border-bottom: 1px solid var(--shadow); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+        .file-item:before { content: "📄"; }
 
-        /* Overlay Awal */
-        #divisionOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-body); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        /* Card Style */
+        /* Card Style (Sama seperti sebelumnya) */
         .card { background: var(--bg-card); border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 10px var(--shadow); border-top: 4px solid var(--border-pink); }
         .sku-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .sku-text { font-size: 13px; color: var(--text-sku); font-weight: bold; }
@@ -115,13 +108,13 @@
 </head>
 <body>
 
-<div id="divisionOverlay">
+<div id="divisionOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-body); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
     <h2 style="margin-bottom:30px;">Pilih Divisi Matahari</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:400px; width:90%;">
-        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(1)">DIVISI 1</button>
-        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(2)">DIVISI 2</button>
-        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(3)">DIVISI 3</button>
-        <button class="btn-float" style="justify-content:center; padding:30px; border-radius: 15px;" onclick="selectDivision(4)">DIVISI 4</button>
+        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(1)">DIVISI 1</button>
+        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(2)">DIVISI 2</button>
+        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(3)">DIVISI 3</button>
+        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(4)">DIVISI 4</button>
     </div>
 </div>
 
@@ -143,9 +136,9 @@
 
 <div class="container">
     <div class="header-app">
-        <h2>Katalog Promo Matahari</h2>
+        <h2 id="titleApp">Katalog Promo Matahari</h2>
         <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Silahkan pilih divisi...</div>
+        <div id="status">Memuat data...</div>
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
@@ -156,31 +149,68 @@
     let allData = [];
     let EXCEL_FILES = [];
     let selectedDiv = null;
+    const DB_NAME = "MatahariPromoCache";
+    const STORE_NAME = "divisiData";
 
-    const themeToggle = document.getElementById('themeToggle');
-    const dbToggle = document.getElementById('dbToggle');
-    const dbModal = document.getElementById('dbModal');
-    const closeModal = document.getElementById('closeModal');
-    const fileListContainer = document.getElementById('fileListContainer');
-    const searchInput = document.getElementById('searchInput');
-    const resultsContainer = document.getElementById('results');
-    const statusText = document.getElementById('status');
-    const loadingBar = document.getElementById('loadingBar');
+    // --- LOGIKA INDEXED DB (CACHE HP) ---
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject("Gagal membuka database cache");
+        });
+    }
 
-    // 1. PEMILIHAN DIVISI
+    async function getCachedData(divId) {
+        const db = await openDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction(STORE_NAME, "readonly");
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(`div_${divId}`);
+            request.onsuccess = () => resolve(request.result);
+        });
+    }
+
+    async function setCachedData(divId, data) {
+        const db = await openDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction(STORE_NAME, "readwrite");
+            const store = transaction.objectStore(STORE_NAME);
+            store.put(data, `div_${divId}`);
+            transaction.oncomplete = () => resolve();
+        });
+    }
+
+    // --- LOGIKA DIVISI & DOWNLOAD ---
     async function selectDivision(num) {
         selectedDiv = num;
-        allData = []; // Reset data
+        allData = [];
         resultsContainer.innerHTML = '';
         searchInput.value = '';
         loadingBar.style.width = '0%';
-        
         document.getElementById('divisionOverlay').style.display = 'none';
-        statusText.innerText = `Memuat data Divisi ${num}...`;
-        await initData();
+        document.getElementById('titleApp').innerText = `Katalog Divisi ${num}`;
+        
+        statusText.innerText = "Mengecek cache di HP...";
+        const cached = await getCachedData(num);
+        
+        if (cached && cached.length > 0) {
+            allData = cached;
+            statusText.innerText = `⚡ Berhasil memuat ${allData.length} data dari memori HP.`;
+            searchInput.disabled = false;
+            searchInput.focus();
+            // Optional: Tetap jalankan initData di background untuk update terbaru
+        } else {
+            await initData();
+        }
     }
 
-    // 2. AMBIL DAFTAR FILE
     async function getExcelList() {
         try {
             const path = `database/${selectedDiv}/list_files.json`;
@@ -190,12 +220,43 @@
             EXCEL_FILES = files.map(file => `database/${selectedDiv}/${file}`);
             return EXCEL_FILES;
         } catch (e) {
-            statusText.innerText = `❌ Gagal memuat daftar Divisi ${selectedDiv}.`;
+            statusText.innerText = `❌ Gagal memuat daftar database Divisi ${selectedDiv}.`;
             return [];
         }
     }
 
-    // 3. LOGIKA DATA
+    async function initData() {
+        const filesToLoad = await getExcelList();
+        if (filesToLoad.length === 0) return;
+
+        let loaded = 0;
+        const freshData = [];
+
+        for (const file of filesToLoad) {
+            try {
+                const resp = await fetch(file);
+                if (!resp.ok) continue;
+                const buf = await resp.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                wb.SheetNames.forEach(sn => {
+                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                    freshData.push(...data);
+                });
+                loaded++;
+                loadingBar.style.width = `${(loaded / filesToLoad.length) * 100}%`;
+                statusText.innerText = `Mendownload Divisi ${selectedDiv}: ${loaded}/${filesToLoad.length} file...`;
+            } catch (e) { console.error(e); }
+        }
+        
+        allData = freshData;
+        await setCachedData(selectedDiv, allData); // Simpan hasil download ke cache HP
+        
+        statusText.innerText = `✅ ${allData.length} data berhasil di-update & disimpan ke HP.`;
+        searchInput.disabled = false;
+        searchInput.focus();
+    }
+
+    // --- FORMATTER & RENDER ---
     function formatDiscount(val) {
         if (val === undefined || val === null) return "-";
         const num = parseFloat(val);
@@ -203,17 +264,6 @@
         if (!isNaN(num) && num >= 1) return num + "%";
         return val;
     }
-
-    const rp = (v) => {
-        if (!v) return '-';
-        let valStr = String(v).trim();
-        // Cek jika mengandung huruf (seperti B1G1)
-        if (/[a-zA-Z]/.test(valStr)) return valStr;
-        
-        let numericOnly = valStr.replace(/[^0-9]/g, "");
-        if (numericOnly === "") return valStr;
-        return 'Rp ' + Number(numericOnly).toLocaleString('id-ID');
-    };
 
     function parseToDate(val) {
         if (!val) return null;
@@ -227,32 +277,24 @@
         return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     }
 
-    async function initData() {
-        const filesToLoad = await getExcelList();
-        if (filesToLoad.length === 0) return;
-
-        let loaded = 0;
-        for (const file of filesToLoad) {
-            try {
-                const resp = await fetch(file);
-                if (!resp.ok) continue;
-                const buf = await resp.arrayBuffer();
-                const wb = XLSX.read(buf, { type: 'array' });
-                wb.SheetNames.forEach(sn => {
-                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                    allData = allData.concat(data);
-                });
-                loaded++;
-                loadingBar.style.width = `${(loaded / filesToLoad.length) * 100}%`;
-                statusText.innerText = `Divisi ${selectedDiv}: ${loaded}/${filesToLoad.length} file...`;
-            } catch (e) { console.error(e); }
+    const rp = (v) => {
+        if (!v) return '-';
+        let valStr = String(v).trim();
+        if (/[a-zA-Z]/.test(valStr)) return valStr;
+        let numericTest = valStr.replace(/[,.]/g, '');
+        if (!isNaN(numericTest) && numericTest !== "") {
+            const cleanNum = valStr.replace(/[^0-9]/g, "");
+            return 'Rp ' + Number(cleanNum).toLocaleString('id-ID');
         }
-        statusText.innerText = `✅ Divisi ${selectedDiv}: ${allData.length} data siap.`;
-        searchInput.disabled = false;
-        searchInput.focus();
-    }
+        return valStr;
+    };
 
-    // 4. PENCARIAN
+    // --- EVENT PENCARIAN ---
+    const searchInput = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('results');
+    const statusText = document.getElementById('status');
+    const loadingBar = document.getElementById('loadingBar');
+
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
         resultsContainer.innerHTML = '';
@@ -282,7 +324,7 @@
             }
 
             const promoPrice = item['HARGA PROMO'] || item[' HARGA PROMO '];
-            const isRawText = /[a-zA-Z]/.test(String(promoPrice));
+            const isText = isNaN(String(promoPrice).replace(/[,.]/g, ''));
 
             card.innerHTML = `
                 <div class="sku-row">
@@ -298,7 +340,7 @@
                 <div class="price-container">
                     <div>
                         <div class="price-normal">${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}</div>
-                        <div class="price-promo" style="${isRawText ? 'font-size: 16px;' : ''}">${rp(promoPrice)}</div>
+                        <div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPrice)}</div>
                     </div>
                     <div style="text-align:right">
                         <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
@@ -310,23 +352,23 @@
         });
     });
 
-    // 5. TEMA & MODAL
+    // --- TEMA & MODAL ---
     function initTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
-        themeToggle.innerHTML = savedTheme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
+        document.getElementById('themeToggle').innerHTML = savedTheme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
     }
 
-    themeToggle.addEventListener('click', () => {
+    document.getElementById('themeToggle').addEventListener('click', () => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const target = isDark ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', target);
         localStorage.setItem('theme', target);
-        themeToggle.innerHTML = target === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
+        document.getElementById('themeToggle').innerHTML = target === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
     });
 
     dbToggle.addEventListener('click', () => {
-        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">📄 ${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong</li>';
+        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong</li>';
         dbModal.style.display = "block";
     });
 
