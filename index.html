@@ -188,7 +188,7 @@
         const cached = await getCachedData(num);
         if (cached && cached.length > 0) {
             allData = cached;
-            statusText.innerText = `⚡ Memuat ${allData.length} data dari memori HP.`;
+            statusText.innerText = `⚡ Memuat ${allData.length} data dari cache.`;
             searchInput.disabled = false;
         } else {
             await initData();
