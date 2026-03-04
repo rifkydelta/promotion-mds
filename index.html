@@ -236,7 +236,7 @@
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
-        if (num === 0 || num === 1) return "SHARP";
+        if (num === 0) return "SHARP";
         if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
         if (!isNaN(num) && num >= 1) return num + "%";
         return val;
@@ -259,7 +259,7 @@
         let valStr = String(v).trim();
         if (/[a-zA-Z]/.test(valStr)) return valStr;
         const cleanNum = valStr.replace(/[^0-9]/g, "");
-        return cleanNum ? 'Rp ' + Number(cleanNum).toLocaleString('id-ID') : valStr;
+        return cleanNum ? 'Rp' + Number(cleanNum).toLocaleString('id-ID') : valStr;
     };
 
     const searchInput = document.getElementById('searchInput');
@@ -272,10 +272,9 @@
         resultsContainer.innerHTML = '';
         if (query.length < 3) return;
 
-        // LOGIKA GMT+7 TANPA UTC SHIFT
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
-        const checkTime = new Date(jakartaTime.getTime() - 60000); // Threshold 00.01
+        const checkTime = new Date(jakartaTime.getTime() - 60000); 
         
         const year = checkTime.getFullYear();
         const month = String(checkTime.getMonth() + 1).padStart(2, '0');
@@ -296,7 +295,10 @@
             const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
             const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
             const discountLabel = formatDiscount(item.DISKON);
-            const isSharp = discountLabel === "SHARP"; // Cek kondisi SHARP
+            
+            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
+            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
+            const isSharp = discountLabel === "SHARP"; 
             
             let statusHtml = '';
             if (fromDate && toDate) {
@@ -304,18 +306,27 @@
                 const fM = String(fromDate.getMonth() + 1).padStart(2, '0');
                 const fD = String(fromDate.getDate()).padStart(2, '0');
                 const fromStr = `${fY}-${fM}-${fD}`;
-
                 const tY = toDate.getFullYear();
                 const tM = String(toDate.getMonth() + 1).padStart(2, '0');
                 const tD = String(toDate.getDate()).padStart(2, '0');
                 const toStr = `${tY}-${tM}-${tD}`;
-                
                 const isActive = todayStr >= fromStr && todayStr <= toStr;
                 statusHtml = isActive ? '<span class="status-label status-aktif">● Aktif</span>' : '<span class="status-label status-non">● Non-Aktif</span>';
             }
 
-            const promoPrice = item['HARGA PROMO'] || item[' HARGA PROMO '];
-            const isText = isNaN(String(promoPrice).replace(/[,.]/g, ''));
+            const promoPriceFormatted = rp(promoPriceRaw);
+            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
+
+            // Logika Normal Price Style & Prefix
+            let normalStyle = "";
+            let prefix = "";
+            
+            if (isSharp) {
+                normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
+            } else if (hasSpecialChars) {
+                normalStyle = "text-decoration: none;";
+                prefix = "@";
+            }
 
             card.innerHTML = `
                 <div class="sku-row">
@@ -330,10 +341,10 @@
                 </div>
                 <div class="price-container">
                     <div>
-                        <div class="price-normal" style="${isSharp ? 'text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);' : ''}">
-                            ${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
+                        <div class="price-normal" style="${normalStyle}">
+                            ${prefix}${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
                         </div>
-                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPrice)}</div>`}
+                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${promoPriceFormatted}</div>`}
                     </div>
                     <div style="text-align:right">
                         <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
