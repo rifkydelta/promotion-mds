@@ -48,9 +48,20 @@
         .container { max-width: 800px; margin: 0 auto; }
         .header-app { text-align: center; margin-bottom: 25px; }
 
+        /* Tombol Toggle & Database di Bawah */
         .controls-bottom {
             position: fixed; bottom: 20px; left: 20px; 
             display: flex; gap: 10px; z-index: 1000;
+        }
+
+        /* Responsive: Rata Tengah untuk Mobile & Tablet (<= 1024px) */
+        @media (max-width: 1024px) {
+            .controls-bottom {
+                left: 0;
+                right: 0;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
         }
 
         .btn-float {
@@ -134,6 +145,7 @@
 <div class="container">
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
+        <h4 style="color:var(--text-muted); margin-top:5px;">Cek promo berlangsung di MDS se-Indonesia</h4>
         <div id="loadingBar" class="loading-progress"></div>
         <div id="status">Memuat data...</div>
     </div>
@@ -171,23 +183,26 @@
         });
     }
 
-    async function setCachedData(divId, data) {
+    async function setCachedData(divId, payload) {
         const db = await openDB();
         const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).put(data, `div_${divId}`);
+        tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
     }
 
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
+        EXCEL_FILES = []; // Reset file list
         resultsContainer.innerHTML = '';
         searchInput.value = '';
         document.getElementById('divisionOverlay').style.display = 'none';
         document.getElementById('titleApp').innerText = `Katalog Divisi ${num}`;
         
         const cached = await getCachedData(num);
-        if (cached && cached.length > 0) {
-            allData = cached;
+        // Cek apakah cache ada dan strukturnya benar (objek dengan data & files)
+        if (cached && cached.data) {
+            allData = cached.data;
+            EXCEL_FILES = cached.files || []; // Ambil daftar file dari cache
             statusText.innerText = `⚡ Memuat ${allData.length} data dari memori HP.`;
             searchInput.disabled = false;
         } else {
@@ -228,11 +243,13 @@
             } catch (e) { console.error(e); }
         }
         allData = freshData;
-        await setCachedData(selectedDiv, allData);
+        // Simpan Data + Daftar File ke Cache
+        await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES });
         statusText.innerText = `✅ ${allData.length} data siap.`;
         searchInput.disabled = false;
     }
 
+    // --- LOGIKA TOOLS ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
@@ -254,26 +271,18 @@
         return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     }
 
-    // --- FIX BUG RUMUS EXCEL ---
     const rp = (v) => {
         if (v === undefined || v === null || v === "") return '-';
-        
         let valStr = String(v).trim();
-        
-        // Jika mengandung huruf (seperti B1G1), tampilkan raw text
         if (/[a-zA-Z]/.test(valStr)) return valStr;
-
-        // Coba konversi ke angka murni (menangani angka hasil rumus)
         let num = parseFloat(valStr.replace(/[,]/g, ''));
-        
         if (!isNaN(num)) {
-            // Lakukan pembulatan agar angka desimal panjang hasil rumus tidak merusak ribuan
             return 'Rp ' + Math.round(num).toLocaleString('id-ID');
         }
-        
         return valStr;
     };
 
+    // --- PENCARIAN & RENDER ---
     const searchInput = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('results');
     const statusText = document.getElementById('status');
@@ -287,7 +296,6 @@
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const checkTime = new Date(jakartaTime.getTime() - 60000); 
-        
         const year = checkTime.getFullYear();
         const month = String(checkTime.getMonth() + 1).padStart(2, '0');
         const day = String(checkTime.getDate()).padStart(2, '0');
@@ -303,40 +311,28 @@
         filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'card';
-            
             const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
             const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
             const discountLabel = formatDiscount(item.DISKON);
-            
-            const promoPriceRaw = item['HARGA PROMO'] || item[' HARGA PROMO '] || '';
-            const hasSpecialChars = /[BD%]/i.test(String(promoPriceRaw));
+            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
+            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
             const isSharp = discountLabel === "SHARP"; 
             
             let statusHtml = '';
             if (fromDate && toDate) {
-                const fY = fromDate.getFullYear();
-                const fM = String(fromDate.getMonth() + 1).padStart(2, '0');
-                const fD = String(fromDate.getDate()).padStart(2, '0');
-                const fromStr = `${fY}-${fM}-${fD}`;
-                const tY = toDate.getFullYear();
-                const tM = String(toDate.getMonth() + 1).padStart(2, '0');
-                const tD = String(toDate.getDate()).padStart(2, '0');
-                const toStr = `${tY}-${tM}-${tD}`;
-                const isActive = todayStr >= fromStr && todayStr <= toStr;
-                statusHtml = isActive ? '<span class="status-label status-aktif">● Aktif</span>' : '<span class="status-label status-non">● Non-Aktif</span>';
+                const fromStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
+                const toStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
+                if (todayStr > toStr) statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
+                else if (todayStr >= fromStr && todayStr <= toStr) statusHtml = '<span class="status-label status-aktif">● Aktif</span>';
+                else statusHtml = '<span class="status-label status-non">● Non-Aktif</span>';
             }
-
-            const isText = isNaN(String(promoPriceRaw).replace(/[,. ]/g, ''));
 
             let normalStyle = "";
             let prefix = "";
-            
-            if (isSharp) {
-                normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
-            } else if (hasSpecialChars) {
-                normalStyle = "text-decoration: none;";
-                prefix = "@";
-            }
+            if (isSharp) normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
+            else if (hasSpecialChars) { normalStyle = "text-decoration: none;"; prefix = "@"; }
+
+            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
 
             card.innerHTML = `
                 <div class="sku-row">
@@ -366,6 +362,7 @@
         });
     });
 
+    // --- TEMA & MODAL ---
     function initTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -381,7 +378,7 @@
     });
 
     dbToggle.addEventListener('click', () => {
-        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong</li>';
+        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong (Data Cache)</li>';
         dbModal.style.display = "block";
     });
 
