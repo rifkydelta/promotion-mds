@@ -48,13 +48,11 @@
         .container { max-width: 800px; margin: 0 auto; }
         .header-app { text-align: center; margin-bottom: 25px; }
 
-        /* Tombol Toggle & Database di Bawah */
         .controls-bottom {
             position: fixed; bottom: 20px; left: 20px; 
             display: flex; gap: 10px; z-index: 1000;
         }
 
-        /* Responsive: Rata Tengah untuk Mobile & Tablet (<= 1024px) */
         @media (max-width: 1024px) {
             .controls-bottom {
                 left: 0;
@@ -145,7 +143,6 @@
 <div class="container">
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
-        <h4 style="color:var(--text-muted); margin-top:5px;">Cek promo berlangsung di MDS se-Indonesia</h4>
         <div id="loadingBar" class="loading-progress"></div>
         <div id="status">Memuat data...</div>
     </div>
@@ -192,17 +189,24 @@
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
-        EXCEL_FILES = []; // Reset file list
+        EXCEL_FILES = [];
         resultsContainer.innerHTML = '';
         searchInput.value = '';
         document.getElementById('divisionOverlay').style.display = 'none';
-        document.getElementById('titleApp').innerText = `Katalog Divisi ${num}`;
+
+        // --- UPDATE JUDUL DENGAN EMOJI ---
+        const emojis = {
+            1: "💃",
+            2: "👟",
+            3: "🤵‍♂️",
+            4: "👶"
+        };
+        document.getElementById('titleApp').innerText = `Katalog Divisi ${num} ${emojis[num] || ''}`;
         
         const cached = await getCachedData(num);
-        // Cek apakah cache ada dan strukturnya benar (objek dengan data & files)
         if (cached && cached.data) {
             allData = cached.data;
-            EXCEL_FILES = cached.files || []; // Ambil daftar file dari cache
+            EXCEL_FILES = cached.files || [];
             statusText.innerText = `⚡ Memuat ${allData.length} data dari memori HP.`;
             searchInput.disabled = false;
         } else {
@@ -243,17 +247,17 @@
             } catch (e) { console.error(e); }
         }
         allData = freshData;
-        // Simpan Data + Daftar File ke Cache
         await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES });
         statusText.innerText = `✅ ${allData.length} data siap.`;
         searchInput.disabled = false;
     }
 
-    // --- LOGIKA TOOLS ---
+    // --- UPDATE FORMAT DISCOUNT SHARP ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
-        if (num === 0 || num === 1) return "SHARP";
+        // Mendukung angka 0 (tanpa diskon) dan 1 (100% diskon) sebagai SHARP
+        if (num === 0 || num === 1) return "SHARP"; 
         if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
         if (!isNaN(num) && num >= 1) return num + "%";
         return val;
@@ -282,7 +286,6 @@
         return valStr;
     };
 
-    // --- PENCARIAN & RENDER ---
     const searchInput = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('results');
     const statusText = document.getElementById('status');
@@ -362,7 +365,6 @@
         });
     });
 
-    // --- TEMA & MODAL ---
     function initTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
