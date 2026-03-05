@@ -188,7 +188,7 @@
         const cached = await getCachedData(num);
         if (cached && cached.length > 0) {
             allData = cached;
-            statusText.innerText = `⚡ Memuat ${allData.length} data dari cache.`;
+            statusText.innerText = `⚡ Memuat ${allData.length} data dari memori HP.`;
             searchInput.disabled = false;
         } else {
             await initData();
@@ -254,12 +254,24 @@
         return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
     }
 
+    // --- FIX BUG RUMUS EXCEL ---
     const rp = (v) => {
-        if (!v) return '-';
+        if (v === undefined || v === null || v === "") return '-';
+        
         let valStr = String(v).trim();
+        
+        // Jika mengandung huruf (seperti B1G1), tampilkan raw text
         if (/[a-zA-Z]/.test(valStr)) return valStr;
-        const cleanNum = valStr.replace(/[^0-9]/g, "");
-        return cleanNum ? 'Rp' + Number(cleanNum).toLocaleString('id-ID') : valStr;
+
+        // Coba konversi ke angka murni (menangani angka hasil rumus)
+        let num = parseFloat(valStr.replace(/[,]/g, ''));
+        
+        if (!isNaN(num)) {
+            // Lakukan pembulatan agar angka desimal panjang hasil rumus tidak merusak ribuan
+            return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+        }
+        
+        return valStr;
     };
 
     const searchInput = document.getElementById('searchInput');
@@ -296,8 +308,8 @@
             const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
             const discountLabel = formatDiscount(item.DISKON);
             
-            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
-            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
+            const promoPriceRaw = item['HARGA PROMO'] || item[' HARGA PROMO '] || '';
+            const hasSpecialChars = /[BD%]/i.test(String(promoPriceRaw));
             const isSharp = discountLabel === "SHARP"; 
             
             let statusHtml = '';
@@ -314,10 +326,8 @@
                 statusHtml = isActive ? '<span class="status-label status-aktif">● Aktif</span>' : '<span class="status-label status-non">● Non-Aktif</span>';
             }
 
-            const promoPriceFormatted = rp(promoPriceRaw);
-            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
+            const isText = isNaN(String(promoPriceRaw).replace(/[,. ]/g, ''));
 
-            // Logika Normal Price Style & Prefix
             let normalStyle = "";
             let prefix = "";
             
@@ -330,7 +340,7 @@
 
             card.innerHTML = `
                 <div class="sku-row">
-                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ''}</div>
+                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.brand ? ` <span class="brand-text">(${item.brand})</span>` : ''}</div>
                     <div class="badge-acara">${item.ACARA || 'PROMO'}</div>
                 </div>
                 <div class="article-name">${item.ARTICLE || 'Tanpa Nama Artikel'}</div>
@@ -344,7 +354,7 @@
                         <div class="price-normal" style="${normalStyle}">
                             ${prefix}${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
                         </div>
-                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${promoPriceFormatted}</div>`}
+                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPriceRaw)}</div>`}
                     </div>
                     <div style="text-align:right">
                         <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
