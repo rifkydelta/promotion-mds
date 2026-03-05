@@ -253,7 +253,7 @@
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
-        if (num === 0) return "SHARP";
+        if (num === 0 || num === 1) return "SHARP";
         if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
         if (!isNaN(num) && num >= 1) return num + "%";
         return val;
