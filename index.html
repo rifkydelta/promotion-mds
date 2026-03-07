@@ -199,24 +199,30 @@
         const emojis = { 1: "Ladies 💃", 2: "Shoes 👟", 3: "Man 👔", 4: "Children 👶" };
         document.getElementById('titleApp').innerText = `Katalog Divisi ${num} ${emojis[num] || ''}`;
         
-        statusText.innerText = "Sinkronisasi data...";
+        statusText.innerText = "Mengecek pembaruan data...";
         
         try {
+            // 1. Ambil JSON terbaru dari server
             const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
             const response = await fetch(path);
-            const serverFiles = await response.json();
-            const serverFullPaths = serverFiles.map(f => `database/${selectedDiv}/${f}`);
+            const serverData = await response.json(); // Sekarang berbentuk Object {version, files}
+            
+            const serverVersion = serverData.version;
+            const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
 
+            // 2. Ambil data dari cache HP
             const cached = await getCachedData(num);
-            const isUpdateNeeded = !cached || JSON.stringify(serverFullPaths) !== JSON.stringify(cached.files);
+
+            // 3. LOGIKA VERSI: Jika versi server berbeda dengan versi cache, maka DOWNLOAD ULANG
+            const isUpdateNeeded = !cached || cached.version !== serverVersion;
 
             if (isUpdateNeeded) {
-                statusText.innerText = "Update ditemukan! Mendownload data baru...";
-                await initData(serverFullPaths);
+                statusText.innerText = "Data baru ditemukan! Sedang sinkronisasi...";
+                await initData(serverFiles, serverVersion);
             } else {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = `⚡ Data up-to-date. Memuat ${allData.length} item dari memori HP.`;
+                statusText.innerText = `⚡ Data up-to-date (Versi: ${serverVersion}). Memuat dari HP.`;
                 enableSearch();
             }
         } catch (e) {
@@ -224,12 +230,44 @@
             if (cached) {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = "⚠️ Mode Offline. Menggunakan data lama di HP.";
+                statusText.innerText = "⚠️ Offline: Menggunakan data terakhir di HP.";
                 enableSearch();
             } else {
-                statusText.innerText = "❌ Gagal sinkronisasi & Cache kosong.";
+                statusText.innerText = "❌ Koneksi gagal & tidak ada cache.";
             }
         }
+    }
+
+    async function initData(targetFiles, versionTag) {
+        let loaded = 0;
+        const freshData = [];
+        EXCEL_FILES = targetFiles;
+
+        for (const file of targetFiles) {
+            try {
+                const resp = await fetch(`${file}?t=${Date.now()}`);
+                const buf = await resp.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                wb.SheetNames.forEach(sn => {
+                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                    freshData.push(...data);
+                });
+                loaded++;
+                loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
+                statusText.innerText = `Mendownload: ${loaded}/${targetFiles.length} file...`;
+            } catch (e) { console.error(e); }
+        }
+        
+        allData = freshData;
+        // Simpan Data, Daftar File, dan Versi (Timestamp) ke Cache
+        await setCachedData(selectedDiv, { 
+            data: allData, 
+            files: EXCEL_FILES,
+            version: versionTag 
+        });
+        
+        statusText.innerText = `✅ Selesai! Versi ${versionTag} tersimpan.`;
+        enableSearch();
     }
 
     async function initData(targetFiles) {
