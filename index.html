@@ -144,7 +144,7 @@
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
         <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Silahkan pilih divisi...</div>
+        <div id="status">Memuat data...</div>
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
@@ -187,7 +187,7 @@
         tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
     }
 
-    // --- 2. LOGIKA SINKRONISASI ---
+    // --- 2. LOGIKA SINKRONISASI VERSI ---
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
@@ -199,41 +199,39 @@
         const emojis = { 1: "Ladies 💃", 2: "Shoes 👟", 3: "Man 👔", 4: "Children 👶" };
         document.getElementById('titleApp').innerText = `Katalog Divisi ${num} ${emojis[num] || ''}`;
         
-        statusText.innerText = "Mengecek pembaruan data...";
+        statusText.innerText = "Mengecek versi data...";
         
         try {
-            // 1. Ambil JSON terbaru dari server
+            // Ambil info dari server
             const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
             const response = await fetch(path);
-            const serverData = await response.json(); // Sekarang berbentuk Object {version, files}
+            const serverData = await response.json(); 
             
-            const serverVersion = serverData.version;
+            const serverVersion = serverData.version; // String versi di JSON
             const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
 
-            // 2. Ambil data dari cache HP
+            // Cek data di cache HP
             const cached = await getCachedData(num);
 
-            // 3. LOGIKA VERSI: Jika versi server berbeda dengan versi cache, maka DOWNLOAD ULANG
-            const isUpdateNeeded = !cached || cached.version !== serverVersion;
-
-            if (isUpdateNeeded) {
-                statusText.innerText = "Data baru ditemukan! Sedang sinkronisasi...";
-                await initData(serverFiles, serverVersion);
-            } else {
+            // KRITERIAL: Jangan download ulang jika versi sama
+            if (cached && cached.version === serverVersion) {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = `⚡ Data up-to-date (Versi: ${serverVersion}). Memuat dari HP.`;
+                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari memori HP.`;
                 enableSearch();
+            } else {
+                statusText.innerText = "Update versi ditemukan! Mendownload...";
+                await initData(serverFiles, serverVersion);
             }
         } catch (e) {
             const cached = await getCachedData(num);
             if (cached) {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = "⚠️ Offline: Menggunakan data terakhir di HP.";
+                statusText.innerText = "⚠️ Offline: Menggunakan cache terakhir.";
                 enableSearch();
             } else {
-                statusText.innerText = "❌ Koneksi gagal & tidak ada cache.";
+                statusText.innerText = "❌ Gagal sinkronisasi & Cache kosong.";
             }
         }
     }
@@ -254,45 +252,18 @@
                 });
                 loaded++;
                 loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
-                statusText.innerText = `Mendownload: ${loaded}/${targetFiles.length} file...`;
+                statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
             } catch (e) { console.error(e); }
         }
         
         allData = freshData;
-        // Simpan Data, Daftar File, dan Versi (Timestamp) ke Cache
+        // Simpan Data, Daftar File, dan Versi ke Cache
         await setCachedData(selectedDiv, { 
             data: allData, 
             files: EXCEL_FILES,
             version: versionTag 
         });
-        
-        statusText.innerText = `✅ Selesai! Versi ${versionTag} tersimpan.`;
-        enableSearch();
-    }
-
-    async function initData(targetFiles) {
-        let loaded = 0;
-        const freshData = [];
-        EXCEL_FILES = targetFiles;
-
-        for (const file of targetFiles) {
-            try {
-                const resp = await fetch(`${file}?t=${Date.now()}`);
-                const buf = await resp.arrayBuffer();
-                const wb = XLSX.read(buf, { type: 'array' });
-                wb.SheetNames.forEach(sn => {
-                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                    freshData.push(...data);
-                });
-                loaded++;
-                loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
-                statusText.innerText = `Downloading: ${loaded}/${targetFiles.length} file...`;
-            } catch (e) { console.error(e); }
-        }
-        
-        allData = freshData;
-        await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES });
-        statusText.innerText = `✅ Update selesai. ${allData.length} data siap.`;
+        statusText.innerText = `✅ Versi ${versionTag} berhasil dipasang.`;
         enableSearch();
     }
 
@@ -301,10 +272,11 @@
         searchInput.focus();
     }
 
-    // --- 3. TOOLS & RENDER ---
+    // --- 3. FORMATTER & RENDER ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
+        // SHARP jika diskon 0 atau 1 (100%)
         if (num === 0 || num === 1) return "SHARP"; 
         if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
         if (!isNaN(num) && num >= 1) return num + "%";
@@ -342,6 +314,7 @@
         resultsContainer.innerHTML = '';
         if (query.length < 3) return;
 
+        // GMT+7 Jakarta Time
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const checkTime = new Date(jakartaTime.getTime() - 60000); 
