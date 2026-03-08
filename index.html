@@ -144,7 +144,7 @@
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
         <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Silahkan pilih divisi...</div>
+        <div id="status">Memuat data...</div>
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
@@ -186,6 +186,7 @@
         tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
     }
 
+    // --- SINKRONISASI VERSI ---
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
@@ -203,7 +204,8 @@
             const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
             const response = await fetch(path);
             const serverData = await response.json(); 
-            const serverVersion = serverData.version;
+            
+            const serverVersion = serverData.version; 
             const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
 
             const cached = await getCachedData(num);
@@ -211,10 +213,10 @@
             if (cached && cached.version === serverVersion) {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari memori HP.`;
+                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari HP.`;
                 enableSearch();
             } else {
-                statusText.innerText = "Update versi ditemukan! Mendownload...";
+                statusText.innerText = "Update data baru ditemukan...";
                 await initData(serverFiles, serverVersion);
             }
         } catch (e) {
@@ -230,10 +232,10 @@
         }
     }
 
-    // --- LOGIKA TERBARU: DEDUPLIKASI SKU BERDASARKAN FROM DATE ---
+    // --- LOGIKA SEDERHANA: AMBIL YANG PALING GEDE (LATEST) ---
     async function initData(targetFiles, versionTag) {
         let loaded = 0;
-        const skuMap = new Map(); // Menggunakan Map untuk handle duplikat SKU
+        const skuMap = new Map(); 
         EXCEL_FILES = targetFiles;
 
         for (const file of targetFiles) {
@@ -249,16 +251,17 @@
                         const sku = String(newItem.SKU || '').trim();
                         if (!sku) return;
 
+                        // Ambil waktu mulai baru
+                        const newTime = parseToDate(newItem['FROM DATE'] || newItem['FROM_DATE'])?.getTime() || 0;
+
                         if (!skuMap.has(sku)) {
                             skuMap.set(sku, newItem);
                         } else {
-                            const existingItem = skuMap.get(sku);
-                            const existingDate = parseToDate(existingItem['FROM DATE'] || existingItem['FROM_DATE']);
-                            const newDate = parseToDate(newItem['FROM DATE'] || newItem['FROM_DATE']);
+                            // Ambil waktu mulai yang sudah ada di Map
+                            const existingTime = parseToDate(skuMap.get(sku)['FROM DATE'] || skuMap.get(sku)['FROM_DATE'])?.getTime() || 0;
                             
-                            // Jika ada SKU sama, bandingkan FROM DATE (Awal Berlaku)
-                            // Menang yang lebih baru (Latest Start Date)
-                            if (newDate && (!existingDate || newDate.getTime() > existingDate.getTime())) {
+                            // SEDERHANA: Jika waktu mulai baru >= waktu lama, timpa!
+                            if (newTime >= existingTime) {
                                 skuMap.set(sku, newItem);
                             }
                         }
@@ -270,13 +273,9 @@
             } catch (e) { console.error(e); }
         }
         
-        allData = Array.from(skuMap.values()); // Ubah kembali Map menjadi Array data unik
-        await setCachedData(selectedDiv, { 
-            data: allData, 
-            files: EXCEL_FILES,
-            version: versionTag 
-        });
-        statusText.innerText = `✅ Versi ${versionTag} berhasil dipasang (${allData.length} SKU unik).`;
+        allData = Array.from(skuMap.values()); 
+        await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES, version: versionTag });
+        statusText.innerText = `✅ Update Selesai! Versi ${versionTag} terpasang.`;
         enableSearch();
     }
 
@@ -285,6 +284,7 @@
         searchInput.focus();
     }
 
+    // --- FORMATTER & RENDER ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
@@ -311,7 +311,7 @@
         let valStr = String(v).trim();
         if (/[a-zA-Z]/.test(valStr)) return valStr;
         let num = parseFloat(valStr.replace(/[,]/g, ''));
-        if (!isNaN(num)) return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+        if (!isNaN(num)) return 'Rp' + Math.round(num).toLocaleString('id-ID');
         return valStr;
     };
 
@@ -325,6 +325,7 @@
         resultsContainer.innerHTML = '';
         if (query.length < 3) return;
 
+        // GMT+7 Logic
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const checkTime = new Date(jakartaTime.getTime() - 60000); 
@@ -337,7 +338,8 @@
             const s = String(item.SKU || '').toLowerCase();
             const a = String(item.ARTICLE || '').toLowerCase();
             const d = String(item.DESCRIPTION || '').toLowerCase();
-            return s.includes(query) || a.includes(query) || d.includes(query);
+            const b = String(item.BRAND || '').toLowerCase();
+            return s.includes(query) || a.includes(query) || d.includes(query) || b.includes(query);
         }).slice(0, 60);
 
         filtered.forEach(item => {
