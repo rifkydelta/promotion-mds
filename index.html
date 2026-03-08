@@ -144,7 +144,7 @@
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
         <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Memuat data...</div>
+        <div id="status">Silahkan pilih divisi...</div>
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
@@ -158,6 +158,7 @@
     const DB_NAME = "MatahariPromoCache";
     const STORE_NAME = "divisiData";
 
+    // --- 1. INDEXED DB ---
     function openDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, 1);
@@ -186,7 +187,7 @@
         tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
     }
 
-    // --- SINKRONISASI VERSI ---
+    // --- 2. SINKRONISASI VERSI ---
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
@@ -204,8 +205,7 @@
             const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
             const response = await fetch(path);
             const serverData = await response.json(); 
-            
-            const serverVersion = serverData.version; 
+            const serverVersion = serverData.version;
             const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
 
             const cached = await getCachedData(num);
@@ -232,10 +232,9 @@
         }
     }
 
-    // --- LOGIKA SEDERHANA: AMBIL YANG PALING GEDE (LATEST) ---
     async function initData(targetFiles, versionTag) {
         let loaded = 0;
-        const skuMap = new Map(); 
+        const freshData = [];
         EXCEL_FILES = targetFiles;
 
         for (const file of targetFiles) {
@@ -243,37 +242,16 @@
                 const resp = await fetch(`${file}?t=${Date.now()}`);
                 const buf = await resp.arrayBuffer();
                 const wb = XLSX.read(buf, { type: 'array' });
-                
                 wb.SheetNames.forEach(sn => {
-                    const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                    
-                    sheetData.forEach(newItem => {
-                        const sku = String(newItem.SKU || '').trim();
-                        if (!sku) return;
-
-                        // Ambil waktu mulai baru
-                        const newTime = parseToDate(newItem['FROM DATE'] || newItem['FROM_DATE'])?.getTime() || 0;
-
-                        if (!skuMap.has(sku)) {
-                            skuMap.set(sku, newItem);
-                        } else {
-                            // Ambil waktu mulai yang sudah ada di Map
-                            const existingTime = parseToDate(skuMap.get(sku)['FROM DATE'] || skuMap.get(sku)['FROM_DATE'])?.getTime() || 0;
-                            
-                            // SEDERHANA: Jika waktu mulai baru >= waktu lama, timpa!
-                            if (newTime >= existingTime) {
-                                skuMap.set(sku, newItem);
-                            }
-                        }
-                    });
+                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                    freshData.push(...data);
                 });
                 loaded++;
                 loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
                 statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
             } catch (e) { console.error(e); }
         }
-        
-        allData = Array.from(skuMap.values()); 
+        allData = freshData;
         await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES, version: versionTag });
         statusText.innerText = `✅ Update Selesai! Versi ${versionTag} terpasang.`;
         enableSearch();
@@ -284,7 +262,7 @@
         searchInput.focus();
     }
 
-    // --- FORMATTER & RENDER ---
+    // --- 3. FORMATTER & RENDER (PERUBAHAN Rp DISINI) ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
@@ -311,7 +289,10 @@
         let valStr = String(v).trim();
         if (/[a-zA-Z]/.test(valStr)) return valStr;
         let num = parseFloat(valStr.replace(/[,]/g, ''));
-        if (!isNaN(num)) return 'Rp' + Math.round(num).toLocaleString('id-ID');
+        if (!isNaN(num)) {
+            // MENGHAPUS SPASI SETELAH Rp
+            return 'Rp' + Math.round(num).toLocaleString('id-ID');
+        }
         return valStr;
     };
 
@@ -325,7 +306,6 @@
         resultsContainer.innerHTML = '';
         if (query.length < 3) return;
 
-        // GMT+7 Logic
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const checkTime = new Date(jakartaTime.getTime() - 60000); 
@@ -340,7 +320,7 @@
             const d = String(item.DESCRIPTION || '').toLowerCase();
             const b = String(item.BRAND || '').toLowerCase();
             return s.includes(query) || a.includes(query) || d.includes(query) || b.includes(query);
-        }).slice(0, 60);
+        }).slice(0, 80);
 
         filtered.forEach(item => {
             const card = document.createElement('div');
@@ -421,3 +401,4 @@
 </script>
 </body>
 </html>
+           
