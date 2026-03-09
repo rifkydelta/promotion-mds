@@ -337,6 +337,19 @@
             return timeB - timeA; // Descending: terbaru dulu
         }).slice(0, 60);
 
+        // Tentukan SKU mana yang FROM DATE terbesar per SKU
+        const skuLatestDate = {};
+        filtered.forEach(item => {
+            const sku = String(item.SKU || '').trim();
+            if (sku) {
+                const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
+                const fromDateNum = fromDate ? fromDate.getTime() : 0;
+                if (!skuLatestDate[sku] || fromDateNum > skuLatestDate[sku]) {
+                    skuLatestDate[sku] = fromDateNum;
+                }
+            }
+        });
+
         filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'card';
@@ -347,13 +360,25 @@
             const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
             const isSharp = discountLabel === "SHARP"; 
             
+            // Cek apakah ini FROM DATE terbesar untuk SKU ini
+            const sku = String(item.SKU || '').trim();
+            const fromDateNum = fromDate ? fromDate.getTime() : 0;
+            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
+            
             let statusHtml = '';
             if (fromDate && toDate) {
                 const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
                 const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
-                if (todayStr > tStr) statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
-                else if (todayStr >= fStr && todayStr <= tStr) statusHtml = '<span class="status-label status-aktif">● Aktif</span>';
-                else statusHtml = '<span class="status-label status-non">● Non-Aktif</span>';
+                
+                // Jika bukan yang terbaru untuk SKU ini, force status BERAKHIR
+                if (!isLatestForSKU) {
+                    statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
+                } else {
+                    // Jika yang terbaru, gunakan status asli
+                    if (todayStr > tStr) statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
+                    else if (todayStr >= fStr && todayStr <= tStr) statusHtml = '<span class="status-label status-aktif">● Aktif</span>';
+                    else statusHtml = '<span class="status-label status-non">● Non-Aktif</span>';
+                }
             }
 
             let normalStyle = "";
