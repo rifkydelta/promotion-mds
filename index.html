@@ -144,7 +144,7 @@
     <div class="header-app">
         <h2 id="titleApp">Katalog Promo Matahari</h2>
         <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Silahkan pilih divisi...</div>
+        <div id="status">Memuat data...</div>
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
@@ -187,7 +187,7 @@
         tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
     }
 
-    // --- 2. SINKRONISASI VERSI ---
+    // --- 2. LOGIKA SINKRONISASI VERSI ---
     async function selectDivision(num) {
         selectedDiv = num;
         allData = [];
@@ -202,21 +202,25 @@
         statusText.innerText = "Mengecek versi data...";
         
         try {
+            // Ambil info dari server
             const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
             const response = await fetch(path);
             const serverData = await response.json(); 
-            const serverVersion = serverData.version;
+            
+            const serverVersion = serverData.version; // String versi di JSON
             const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
 
+            // Cek data di cache HP
             const cached = await getCachedData(num);
 
+            // KRITERIAL: Jangan download ulang jika versi sama
             if (cached && cached.version === serverVersion) {
                 allData = cached.data;
                 EXCEL_FILES = cached.files;
-                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari HP.`;
+                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari memori HP.`;
                 enableSearch();
             } else {
-                statusText.innerText = "Update data baru ditemukan...";
+                statusText.innerText = "Update versi ditemukan! Mendownload...";
                 await initData(serverFiles, serverVersion);
             }
         } catch (e) {
@@ -251,9 +255,15 @@
                 statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
             } catch (e) { console.error(e); }
         }
+        
         allData = freshData;
-        await setCachedData(selectedDiv, { data: allData, files: EXCEL_FILES, version: versionTag });
-        statusText.innerText = `✅ Update Selesai! Versi ${versionTag} terpasang.`;
+        // Simpan Data, Daftar File, dan Versi ke Cache
+        await setCachedData(selectedDiv, { 
+            data: allData, 
+            files: EXCEL_FILES,
+            version: versionTag 
+        });
+        statusText.innerText = `✅ Versi ${versionTag} berhasil dipasang.`;
         enableSearch();
     }
 
@@ -262,10 +272,11 @@
         searchInput.focus();
     }
 
-    // --- 3. FORMATTER & RENDER (PERUBAHAN Rp DISINI) ---
+    // --- 3. FORMATTER & RENDER ---
     function formatDiscount(val) {
         if (val === undefined || val === null || val === "") return "-";
         const num = parseFloat(val);
+        // SHARP jika diskon 0 atau 1 (100%)
         if (num === 0 || num === 1) return "SHARP"; 
         if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
         if (!isNaN(num) && num >= 1) return num + "%";
@@ -289,10 +300,7 @@
         let valStr = String(v).trim();
         if (/[a-zA-Z]/.test(valStr)) return valStr;
         let num = parseFloat(valStr.replace(/[,]/g, ''));
-        if (!isNaN(num)) {
-            // MENGHAPUS SPASI SETELAH Rp
-            return 'Rp' + Math.round(num).toLocaleString('id-ID');
-        }
+        if (!isNaN(num)) return 'Rp' + Math.round(num).toLocaleString('id-ID');
         return valStr;
     };
 
@@ -306,6 +314,7 @@
         resultsContainer.innerHTML = '';
         if (query.length < 3) return;
 
+        // GMT+7 Jakarta Time
         const now = new Date();
         const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
         const checkTime = new Date(jakartaTime.getTime() - 60000); 
@@ -318,9 +327,15 @@
             const s = String(item.SKU || '').toLowerCase();
             const a = String(item.ARTICLE || '').toLowerCase();
             const d = String(item.DESCRIPTION || '').toLowerCase();
-            const b = String(item.BRAND || '').toLowerCase();
-            return s.includes(query) || a.includes(query) || d.includes(query) || b.includes(query);
-        }).slice(0, 80);
+            return s.includes(query) || a.includes(query) || d.includes(query);
+        }).sort((a, b) => {
+            // Urutkan berdasarkan FROM DATE terbaru (terbesar) paling atas
+            const dateA = parseToDate(a['FROM DATE'] || a['FROM_DATE']);
+            const dateB = parseToDate(b['FROM DATE'] || b['FROM_DATE']);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA; // Descending: terbaru dulu
+        }).slice(0, 60);
 
         filtered.forEach(item => {
             const card = document.createElement('div');
@@ -376,6 +391,7 @@
         });
     });
 
+    // --- 4. TEMA & MODAL ---
     function initTheme() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -401,4 +417,3 @@
 </script>
 </body>
 </html>
-           
