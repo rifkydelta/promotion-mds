@@ -363,7 +363,7 @@
             // Cek apakah ini FROM DATE terbesar untuk SKU ini
             const sku = String(item.SKU || '').trim();
             const fromDateNum = fromDate ? fromDate.getTime() : 0;
-            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
+            const isLatestForSKU = !sku || (skuLatestDate[sku] > fromDateNum);
             
             let statusHtml = '';
             if (fromDate && toDate) {
