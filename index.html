@@ -363,22 +363,35 @@
             // Cek apakah ini FROM DATE terbesar untuk SKU ini
             const sku = String(item.SKU || '').trim();
             const fromDateNum = fromDate ? fromDate.getTime() : 0;
-            const isLatestForSKU = !sku || (skuLatestDate[sku] > fromDateNum);
+            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
             
             let statusHtml = '';
+            // Pastikan todayStr sudah didefinisikan di luar loop dengan format 'YYYY-MM-DD'
+            // Contoh: const todayStr = new Date().toISOString().split('T')[0];
+
             if (fromDate && toDate) {
                 const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
                 const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
                 
-                // Jika bukan yang terbaru untuk SKU ini, force status BERAKHIR
-                if (!isLatestForSKU) {
-                    statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
+                let label = "";
+                let css = "";
+
+                if (todayStr > tStr) {
+                    label = "BERAKHIR";
+                    css = "status-non";
+                } else if (todayStr >= fStr && todayStr <= tStr) {
+                    label = "Aktif";
+                    css = "status-aktif";
                 } else {
-                    // Jika yang terbaru, gunakan status asli
-                    if (todayStr > tStr) statusHtml = '<span class="status-label status-non">● BERAKHIR</span>';
-                    else if (todayStr >= fStr && todayStr <= tStr) statusHtml = '<span class="status-label status-aktif">● Aktif</span>';
-                    else statusHtml = '<span class="status-label status-non">● Non-Aktif</span>';
+                    label = "Non-Aktif";
+                    css = "status-non";
                 }
+
+                // Hanya gunakan isLatestForSKU jika kamu ingin menandai 
+                // promo lama yang menumpuk sebagai berakhir secara manual.
+                // Jika ingin murni berdasarkan tanggal, biarkan logika di atas.
+                
+                statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
             }
 
             let normalStyle = "";
