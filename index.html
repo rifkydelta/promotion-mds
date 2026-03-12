@@ -679,10 +679,14 @@
 
             async function saveUploadedFile(name, data) {
                 const db = await openDB();
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     const tx = db.transaction(UPLOAD_STORE, "readwrite");
-                    tx.objectStore(UPLOAD_STORE).put({ name, data });
-                    tx.oncomplete = resolve;
+                    // Salin buffer agar tidak terpengaruh perubahan referensi luar
+                    const copy = data.slice();
+                    tx.objectStore(UPLOAD_STORE).put({ name, data: copy });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error);
                 });
             }
 
@@ -1100,10 +1104,6 @@
             });
 
             // --- UPLOAD MODE: Event handlers ---
-            document.getElementById("uploadDropZone").addEventListener("click", () => {
-                document.getElementById("uploadFileInput").click();
-            });
-
             document.getElementById("uploadDropZone").addEventListener("dragover", (e) => {
                 e.preventDefault();
                 e.currentTarget.style.background = "rgba(57,73,171,0.12)";
@@ -1148,19 +1148,30 @@
                 let loaded = 0;
                 for (const file of files) {
                     try {
+                        // Baca file menjadi ArrayBuffer
                         const buf = await file.arrayBuffer();
-                        const arr = new Uint8Array(buf);
-                        // Simpan ke IndexedDB
-                        await saveUploadedFile(file.name, arr);
-                        // Parse langsung ke allData
-                        const wb = XLSX.read(arr, { type: "array" });
+
+                        // Buat DUA salinan terpisah: satu untuk disimpan, satu untuk dibaca XLSX
+                        const arrForStore = new Uint8Array(buf.slice(0));
+                        const arrForRead  = new Uint8Array(buf.slice(0));
+
+                        // Simpan ke IndexedDB dan tunggu benar-benar selesai
+                        await saveUploadedFile(file.name, arrForStore);
+
+                        // Parse dari salinan terpisah
+                        const wb = XLSX.read(arrForRead, { type: "array" });
                         wb.SheetNames.forEach(sn => {
                             allData.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn]));
                         });
+
                         if (!EXCEL_FILES.includes(file.name)) EXCEL_FILES.push(file.name);
                         loaded++;
                         loadingBar.style.width = `${(loaded / files.length) * 100}%`;
-                    } catch (e) { console.error(e); }
+                        statusText.innerText = `⏳ Memproses ${loaded}/${files.length} file...`;
+                    } catch (e) {
+                        console.error(`Gagal memproses ${file.name}:`, e);
+                        statusText.innerText = `❌ Gagal: ${file.name}`;
+                    }
                 }
                 await renderUploadFileList();
                 statusText.innerText = `✅ ${loaded} file berhasil ditambahkan. Total: ${EXCEL_FILES.length} file.`;
