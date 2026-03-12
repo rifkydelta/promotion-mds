@@ -642,7 +642,15 @@
     let cameraStream = null;
     let cameraActive = false;
     let detectionRunning = false;
-    let zxingCodeReader = null; // ZXing BrowserMultiFormatReader instance
+    let lastDetectionTime = 0;
+    const DETECTION_COOLDOWN = 50; // 50ms antara deteksi untuk performa optimal
+    
+    // Cache ZXing objects untuk performa optimal (reuse setiap frame)
+    let zxingCodeReader = null;
+    let detectionCanvas = null;
+    let detectionCtx = null;
+    let lastCropWidth = 0;
+    let lastCropHeight = 0;
 
     function showCameraStatus(message, type = 'info') {
         cameraStatus.textContent = message;
@@ -699,31 +707,143 @@
         cameraToggleBtn.classList.remove('active');
         cameraToggleBtn.innerHTML = '🎥 Aktifkan Kamera';
         showCameraStatus('Kamera dimatikan', 'info');
+        
+        // Clean up cached detection canvas
+        // detectionCanvas = null;
+        // detectionCtx = null;
     }
 
     function startBarcodeDetection() {
         if (detectionRunning) return;
         detectionRunning = true;
 
-        if (!zxingCodeReader) {
-            showCameraStatus('❌ ZXing reader belum siap', 'error');
+        // Tunggu ZXing library terload
+        if (typeof ZXing === 'undefined') {
+            console.error('ZXing library belum terload');
+            showCameraStatus('⏳ Tunggu, library sedang dimuat...', 'info');
+            setTimeout(startBarcodeDetection, 500);
             return;
         }
 
-        // Gunakan BrowserMultiFormatReader yang lebih simple dan reliable
-        zxingCodeReader.decodeFromVideoDevice(undefined, 'cameraVideo', (result, err) => {
-            if (result) {
-                const barcode = result.text.trim();
-                const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
-                if (barcode.length >= 2) {
-                    stopCamera();
-                    processBarcodeSearch(barcode, barcodeType);
+        // Initialize ZXing code reader
+        if (!zxingCodeReader) {
+            zxingCodeReader = new ZXing.BrowserMultiFormatReader();
+            // Set hints untuk deteksi semua format barcode
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                ZXing.BarcodeFormat.QR_CODE,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E,
+                ZXing.BarcodeFormat.CODABAR,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.CODE_93,
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.ITF,
+                ZXing.BarcodeFormat.RSS_14,
+                ZXing.BarcodeFormat.RSS_EXPANDED,
+                ZXing.BarcodeFormat.PDF_417,
+                ZXing.BarcodeFormat.AZTEC,
+                ZXing.BarcodeFormat.DATA_MATRIX,
+                ZXing.BarcodeFormat.MAXICODE,
+                ZXing.BarcodeFormat.MICRO_QR
+            ]);
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            zxingCodeReader.setHints(hints);
+        }
+
+        function detectFrame() {
+            // Cek apakah video sudah siap
+            if (!cameraActive || cameraVideo.readyState !== cameraVideo.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            // Pastikan video memiliki dimensi
+            if (cameraVideo.videoWidth === 0 || cameraVideo.videoHeight === 0) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            // Skip frames berdasarkan cooldown untuk performa
+            const now = Date.now();
+            if (now - lastDetectionTime < DETECTION_COOLDOWN) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            lastDetectionTime = now;
+
+            const ctx = cameraCanvas.getContext('2d');
+            const videoWidth = cameraVideo.videoWidth;
+            const videoHeight = cameraVideo.videoHeight;
+            
+            // Canvas untuk menampung video penuh
+            cameraCanvas.width = videoWidth;
+            cameraCanvas.height = videoHeight;
+            
+            try {
+                ctx.drawImage(cameraVideo, 0, 0, videoWidth, videoHeight);
+            } catch (e) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            
+            // Hitung area preview yang zoom 2x (center portion)
+            // Dengan scale(2), hanya 50% dari center yang terlihat
+            const centerX = videoWidth / 2;
+            const centerY = videoHeight / 2;
+            const cropWidth = videoWidth / 2;  // 50% dari width
+            const cropHeight = videoHeight / 2; // 50% dari height
+            
+            const cropX = centerX - (cropWidth / 2);
+            const cropY = centerY - (cropHeight / 2);
+            
+            // Reuse atau create detection canvas yang sesuai ukuran
+            if (!detectionCanvas || lastCropWidth !== cropWidth || lastCropHeight !== cropHeight) {
+                detectionCanvas = document.createElement('canvas');
+                detectionCanvas.width = cropWidth;
+                detectionCanvas.height = cropHeight;
+                detectionCtx = detectionCanvas.getContext('2d', { willReadFrequently: true });
+                lastCropWidth = cropWidth;
+                lastCropHeight = cropHeight;
+            }
+            
+            // Copy cropped area langsung ke detection canvas (lebih efisien)
+            try {
+                detectionCtx.drawImage(cameraCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+            } catch (e) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            
+            // Deteksi barcode menggunakan ZXing pada area preview yang terlihat
+            try {
+                const image = detectionCtx.getImageData(0, 0, cropWidth, cropHeight);
+                const luminanceSource = new ZXing.RGBLuminanceSource(image.data, image.width, image.height);
+                const binarizer = new ZXing.HybridBinarizer(luminanceSource);
+                const binaryBitmap = new ZXing.BinaryBitmap(binarizer);
+                const result = zxingCodeReader.decodeWithState(binaryBitmap);
+                
+                if (result) {
+                    const barcode = result.text.trim();
+                    const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                    if (barcode.length >= 2) {
+                        stopCamera();
+                        processBarcodeSearch(barcode, barcodeType);
+                        return;
+                    }
                 }
+            } catch (e) {
+                // No barcode found, continue scanning
             }
-            if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.error(err);
+
+            if (cameraActive) {
+                requestAnimationFrame(detectFrame);
             }
-        });
+        }
+
+        detectFrame();
     }
 
     cameraToggleBtn.addEventListener('click', () => {
