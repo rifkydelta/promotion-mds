@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Promo Searcher - Matahari</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         :root {
             --bg-body: #f4f7f6;
@@ -110,6 +112,37 @@
         .price-normal { text-decoration: line-through; color: var(--text-muted); font-size: 14px; }
         .discount-tag { color: var(--border-pink); font-weight: bold; font-size: 18px; }
         .loading-progress { height: 4px; background: var(--border-pink); width: 0%; transition: width 0.3s; margin-bottom: 10px; }
+        
+        .camera-section { 
+            margin: 20px 0; padding: 15px; background: var(--bg-card); border-radius: 12px; 
+            border: 2px solid #2196F3; box-shadow: 0 2px 10px var(--shadow);
+        }
+        
+        #cameraVideo { 
+            width: 100%; max-width: 100%; border-radius: 8px; 
+            background: #000; display: none; margin-bottom: 10px;
+        }
+        
+        #cameraCanvas { display: none; }
+        
+        .camera-controls {
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+        
+        .camera-toggle { 
+            flex: 1; min-width: 150px; padding: 12px 15px; 
+            background: #2196F3; color: white; border: none; 
+            border-radius: 8px; cursor: pointer; font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .camera-toggle:hover { background: #1976D2; }
+        .camera-toggle.active { background: #d32f2f; }
+        
+        .camera-status {
+            font-size: 12px; color: var(--text-muted); padding: 8px; 
+            text-align: center; border-radius: 6px; display: none;
+        }
     </style>
 </head>
 <body>
@@ -148,6 +181,17 @@
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
+    
+    <div class="camera-section">
+        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA</label>
+        <video id="cameraVideo" playsinline autoplay></video>
+        <canvas id="cameraCanvas"></canvas>
+        <div class="camera-controls">
+            <button id="cameraToggleBtn" class="camera-toggle">🎥 Aktifkan Kamera</button>
+        </div>
+        <div id="cameraStatus" class="camera-status"></div>
+    </div>
+    
     <div id="results"></div>
 </div>
 
@@ -451,6 +495,294 @@
 
     closeModal.onclick = () => dbModal.style.display = "none";
     window.onclick = (e) => { if(e.target == dbModal) dbModal.style.display = "none"; }
+    
+    // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
+    function processBarcodeSearch(barcode) {
+        if (!selectedDiv) {
+            showCameraStatus('❌ Pilih divisi terlebih dahulu', 'error');
+            return;
+        }
+        
+        const query = barcode.toLowerCase();
+        resultsContainer.innerHTML = '';
+
+        const now = new Date();
+        const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        const checkTime = new Date(jakartaTime.getTime() - 60000); 
+        const year = checkTime.getFullYear();
+        const month = String(checkTime.getMonth() + 1).padStart(2, '0');
+        const day = String(checkTime.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        const filtered = allData.filter(item => {
+            const s = String(item.SKU || '').toLowerCase();
+            const a = String(item.ARTICLE || '').toLowerCase();
+            const d = String(item.DESCRIPTION || '').toLowerCase();
+            return s.includes(query) || a.includes(query) || d.includes(query);
+        }).sort((a, b) => {
+            const dateA = parseToDate(a['FROM DATE'] || a['FROM_DATE']);
+            const dateB = parseToDate(b['FROM DATE'] || b['FROM_DATE']);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA;
+        }).slice(0, 30);
+
+        if (filtered.length === 0) {
+            showCameraStatus(`Barcode '${barcode}' tidak ditemukan`, 'error');
+            return;
+        }
+
+        const skuLatestDate = {};
+        filtered.forEach(item => {
+            const sku = String(item.SKU || '').trim();
+            if (sku) {
+                const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
+                const fromDateNum = fromDate ? fromDate.getTime() : 0;
+                if (!skuLatestDate[sku] || fromDateNum > skuLatestDate[sku]) {
+                    skuLatestDate[sku] = fromDateNum;
+                }
+            }
+        });
+
+        filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
+            const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
+            const discountLabel = formatDiscount(item.DISKON);
+            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
+            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
+            const isSharp = discountLabel === "SHARP"; 
+            
+            const sku = String(item.SKU || '').trim();
+            const fromDateNum = fromDate ? fromDate.getTime() : 0;
+            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
+            
+            let statusHtml = '';
+
+            if (fromDate && toDate) {
+                const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
+                const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
+                
+                let label = "";
+                let css = "";
+
+                if (todayStr > tStr) {
+                    label = "BERAKHIR";
+                    css = "status-non";
+                } else if (todayStr >= fStr && todayStr <= tStr) {
+                    label = "Aktif";
+                    css = "status-aktif";
+                } else {
+                    label = "Non-Aktif";
+                    css = "status-non";
+                }
+                
+                statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
+            }
+
+            let normalStyle = "";
+            let prefix = "";
+            if (isSharp) normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
+            else if (hasSpecialChars) { normalStyle = "text-decoration: none;"; prefix = "@"; }
+
+            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
+
+            card.innerHTML = `
+                <div class="sku-row">
+                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ''}</div>
+                    <div class="badge-acara">${item.ACARA || 'PROMO'}</div>
+                </div>
+                <div class="article-name">${item.ARTICLE || 'Tanpa Nama Artikel'}</div>
+                <div class="description">${item.DESCRIPTION || ''}</div>
+                <div class="period-row">
+                    <div class="period-box">📅 ${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}</div>
+                    ${statusHtml}
+                </div>
+                <div class="price-container">
+                    <div>
+                        <div class="price-normal" style="${normalStyle}">
+                            ${prefix}${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
+                        </div>
+                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPriceRaw)}</div>`}
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
+                        <div class="discount-tag">${discountLabel}</div>
+                    </div>
+                </div>
+            `;
+            resultsContainer.appendChild(card);
+        });
+        
+        showCameraStatus(`✅ Ditemukan ${filtered.length} hasil untuk '${barcode}'`, 'success');
+        
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+    }
+    
+    // --- 5. CAMERA BARCODE SCANNING ---
+    const cameraToggleBtn = document.getElementById('cameraToggleBtn');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const cameraCanvas = document.getElementById('cameraCanvas');
+    const cameraStatus = document.getElementById('cameraStatus');
+    let cameraStream = null;
+    let cameraActive = false;
+    let detectionRunning = false;
+    let lastDetectionTime = 0;
+    const DETECTION_COOLDOWN = 500; // 500ms antara deteksi untuk menghemat resources
+
+    function showCameraStatus(message, type = 'info') {
+        cameraStatus.textContent = message;
+        cameraStatus.style.display = 'block';
+        cameraStatus.style.background = type === 'success' ? '#c8e6c9' : type === 'error' ? '#ffcdd2' : '#bbdefb';
+        cameraStatus.style.color = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#1565c0';
+        
+        if (type !== 'info') {
+            setTimeout(() => {
+                cameraStatus.style.display = 'none';
+            }, 4000);
+        }
+    }
+
+    async function startCamera() {
+        try {
+            showCameraStatus('⏳ Membuka kamera...', 'info');
+            
+            const constraints = {
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraVideo.srcObject = cameraStream;
+            cameraVideo.style.display = 'block';
+            cameraActive = true;
+            cameraToggleBtn.classList.add('active');
+            cameraToggleBtn.innerHTML = '❌ Matikan Kamera';
+            
+            // Tunggu sebentar untuk memastikan video sudah siap
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            showCameraStatus('✅ Kamera siap. Arahkan ke barcode/QR code', 'success');
+            lastDetectionTime = 0;
+            startBarcodeDetection();
+            
+        } catch (e) {
+            showCameraStatus(`❌ Akses kamera ditolak: ${e.message}`, 'error');
+            console.error(e);
+            cameraActive = false;
+        }
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        cameraVideo.style.display = 'none';
+        cameraVideo.srcObject = null;
+        cameraActive = false;
+        detectionRunning = false;
+        cameraToggleBtn.classList.remove('active');
+        cameraToggleBtn.innerHTML = '🎥 Aktifkan Kamera';
+        showCameraStatus('Kamera dimatikan', 'info');
+    }
+
+    function startBarcodeDetection() {
+        if (detectionRunning) return;
+        detectionRunning = true;
+
+        function detectFrame() {
+            // Cek apakah video sudah siap
+            if (!cameraActive || cameraVideo.readyState !== cameraVideo.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            // Pastikan video memiliki dimensi
+            if (cameraVideo.videoWidth === 0 || cameraVideo.videoHeight === 0) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            const ctx = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraVideo.videoWidth;
+            cameraCanvas.height = cameraVideo.videoHeight;
+            
+            try {
+                ctx.drawImage(cameraVideo, 0, 0);
+            } catch (e) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            
+            const imageData = ctx.getImageData(0, 0, cameraCanvas.width, cameraCanvas.height);
+            
+            // Deteksi QR Code dengan jsQR setiap frame
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (qrCode) {
+                const barcode = qrCode.data.trim();
+                if (barcode.length >= 2) {
+                    stopCamera();
+                    processBarcodeSearch(barcode);
+                    return;
+                }
+            }
+            
+            // Deteksi barcode linear (EAN, Code128) dengan cooldown untuk efisiensi
+            const now = Date.now();
+            if (now - lastDetectionTime > DETECTION_COOLDOWN) {
+                lastDetectionTime = now;
+                
+                Quagga.decodeSingle({
+                    src: cameraCanvas.toDataURL('image/png'),
+                    numOfWorkers: 0,
+                    inputStream: {
+                        size: 800
+                    },
+                    decoder: {
+                        readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader']
+                    }
+                }, (result) => {
+                    if (result && result.codeResult && cameraActive) {
+                        const barcode = result.codeResult.code.trim();
+                        if (barcode.length >= 2) {
+                            stopCamera();
+                            processBarcodeSearch(barcode);
+                            return;
+                        }
+                    }
+                });
+            }
+
+            if (cameraActive) {
+                requestAnimationFrame(detectFrame);
+            }
+        }
+
+        detectFrame();
+    }
+
+    cameraToggleBtn.addEventListener('click', () => {
+        if (cameraActive) {
+            stopCamera();
+        } else {
+            if (!selectedDiv) {
+                showCameraStatus('❌ Pilih divisi terlebih dahulu', 'error');
+                return;
+            }
+            startCamera();
+        }
+    });
+    
+    // --- 5b. KEYBOARD BARCODE SCANNING (REMOVED) ---
+    
     initTheme();
 </script>
 </body>
