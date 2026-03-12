@@ -585,13 +585,25 @@
     function getBarcodeTypeNameZXing(format) {
         const barcodeFormats = {
             '0': '📦 QR Code',
-            '1': '📦 EAN-13 (Retail)',
+            '1': '📦 EAN-13 (Ritel)',
             '2': '📦 EAN-8 (Mini)',
+            '3': '📦 UPC-A',
+            '4': '📦 UPC-E',
+            '5': '📋 Codabar',
+            '6': '📋 Code 39',
+            '7': '📋 Code 93',
             '8': '📋 Code 128 (Data)',
-            '9': '📋 Code 39 (Alphanum)'
+            '9': '🔢 ITF (2D5)',
+            '10': '🔢 RSS-14',
+            '11': '🔢 RSS Expanded',
+            '12': '📄 PDF-417',
+            '13': '🔷 Aztec',
+            '14': '🔷 Data Matrix',
+            '15': '🔷 MaxiCode',
+            '16': '🔷 MicroQR'
         };
         
-        return barcodeFormats[String(format)] || 'Linear Barcode';
+        return barcodeFormats[String(format)] || '📦 Linear Barcode';
     }
     
     function processBarcodeSearch(barcode, barcodeType = 'UNKNOWN') {
@@ -716,14 +728,27 @@
         if (!zxingReader) {
             zxingReader = new ZXing.MultiFormatReader();
             zxingHints = new Map();
+            // Support semua format barcode & QR yang ada di ZXing library
             zxingHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
                 ZXing.BarcodeFormat.QR_CODE,
                 ZXing.BarcodeFormat.EAN_13,
                 ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E,
+                ZXing.BarcodeFormat.CODABAR,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.CODE_93,
                 ZXing.BarcodeFormat.CODE_128,
-                ZXing.BarcodeFormat.CODE_39
+                ZXing.BarcodeFormat.ITF,
+                ZXing.BarcodeFormat.RSS_14,
+                ZXing.BarcodeFormat.RSS_EXPANDED,
+                ZXing.BarcodeFormat.PDF_417,
+                ZXing.BarcodeFormat.AZTEC,
+                ZXing.BarcodeFormat.DATA_MATRIX,
+                ZXing.BarcodeFormat.MAXICODE,
+                ZXing.BarcodeFormat.MICRO_QR
             ]);
-            zxingHints.set(ZXing.DecodeHintType.TRY_HARDER, true); // Enhance detection accuracy
+            zxingHints.set(ZXing.DecodeHintType.TRY_HARDER, true); // Tingkatkan akurasi deteksi
             zxingReader.setHints(zxingHints);
         }
 
