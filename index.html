@@ -631,7 +631,15 @@
     let cameraActive = false;
     let detectionRunning = false;
     let lastDetectionTime = 0;
-    const DETECTION_COOLDOWN = 500; // 500ms antara deteksi untuk menghemat resources
+    const DETECTION_COOLDOWN = 50; // 50ms antara deteksi untuk performa optimal
+    
+    // Cache ZXing objects untuk performa optimal (reuse setiap frame)
+    let zxingReader = null;
+    let zxingHints = null;
+    let detectionCanvas = null;
+    let detectionCtx = null;
+    let lastCropWidth = 0;
+    let lastCropHeight = 0;
 
     function showCameraStatus(message, type = 'info') {
         cameraStatus.textContent = message;
@@ -691,11 +699,33 @@
         cameraToggleBtn.classList.remove('active');
         cameraToggleBtn.innerHTML = '🎥 Aktifkan Kamera';
         showCameraStatus('Kamera dimatikan', 'info');
+        
+        // Clean up cached ZXing objects and detection canvas
+        // Note: Keep caching for next camera activation for faster startup
+        // zxingReader = null;
+        // zxingHints = null;
+        // detectionCanvas = null;
+        // detectionCtx = null;
     }
 
     function startBarcodeDetection() {
         if (detectionRunning) return;
         detectionRunning = true;
+
+        // Initialize ZXing objects once for reuse
+        if (!zxingReader) {
+            zxingReader = new ZXing.MultiFormatReader();
+            zxingHints = new Map();
+            zxingHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                ZXing.BarcodeFormat.QR_CODE,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.CODE_39
+            ]);
+            zxingHints.set(ZXing.DecodeHintType.TRY_HARDER, true); // Enhance detection accuracy
+            zxingReader.setHints(zxingHints);
+        }
 
         function detectFrame() {
             // Cek apakah video sudah siap
@@ -709,6 +739,14 @@
                 requestAnimationFrame(detectFrame);
                 return;
             }
+
+            // Skip frames berdasarkan cooldown untuk performa
+            const now = Date.now();
+            if (now - lastDetectionTime < DETECTION_COOLDOWN) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+            lastDetectionTime = now;
 
             const ctx = cameraCanvas.getContext('2d');
             const videoWidth = cameraVideo.videoWidth;
@@ -735,15 +773,23 @@
             const cropX = centerX - (cropWidth / 2);
             const cropY = centerY - (cropHeight / 2);
             
-            // Extract cropped image data (area yang terlihat di preview)
-            const croppedImageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+            // Reuse atau create detection canvas yang sesuai ukuran
+            if (!detectionCanvas || lastCropWidth !== cropWidth || lastCropHeight !== cropHeight) {
+                detectionCanvas = document.createElement('canvas');
+                detectionCanvas.width = cropWidth;
+                detectionCanvas.height = cropHeight;
+                detectionCtx = detectionCanvas.getContext('2d', { willReadFrequently: true });
+                lastCropWidth = cropWidth;
+                lastCropHeight = cropHeight;
+            }
             
-            // Canvas untuk deteksi barcode (hanya area yang terlihat)
-            const detectionCanvas = document.createElement('canvas');
-            detectionCanvas.width = cropWidth;
-            detectionCanvas.height = cropHeight;
-            const detectionCtx = detectionCanvas.getContext('2d');
-            detectionCtx.putImageData(croppedImageData, 0, 0);
+            // Copy cropped area langsung ke detection canvas (lebih efisien)
+            try {
+                detectionCtx.drawImage(cameraCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+            } catch (e) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
             
             // Deteksi barcode menggunakan ZXing pada area yang terlihat
             try {
@@ -751,17 +797,7 @@
                 const luminanceSource = new ZXing.RGBLuminanceSource(image.data, image.width, image.height);
                 const binarizer = new ZXing.HybridBinarizer(luminanceSource);
                 const binaryBitmap = new ZXing.BinaryBitmap(binarizer);
-                const hints = new Map();
-                hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-                    ZXing.BarcodeFormat.QR_CODE,
-                    ZXing.BarcodeFormat.EAN_13,
-                    ZXing.BarcodeFormat.EAN_8,
-                    ZXing.BarcodeFormat.CODE_128,
-                    ZXing.BarcodeFormat.CODE_39
-                ]);
-                const reader = new ZXing.MultiFormatReader();
-                reader.setHints(hints);
-                const result = reader.decode(binaryBitmap);
+                const result = zxingReader.decode(binaryBitmap);
                 
                 if (result) {
                     const barcode = result.text.trim();
@@ -795,9 +831,7 @@
             startCamera();
         }
     });
-    
-    // --- 5b. KEYBOARD BARCODE SCANNING (REMOVED) ---
-    
+
     initTheme();
 </script>
 </body>
