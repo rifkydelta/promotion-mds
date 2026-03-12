@@ -486,6 +486,20 @@
                 >
                     DIVISI 4
                 </button>
+                <button
+                    class="btn-float"
+                    style="
+                        justify-content: center;
+                        padding: 30px;
+                        grid-column: 1 / -1;
+                        background: #1a237e;
+                        border-color: #3949ab;
+                        color: #fff;
+                    "
+                    onclick="selectUploadMode()"
+                >
+                    📤 Mode Unggah
+                </button>
             </div>
         </div>
 
@@ -518,6 +532,27 @@
                     class="file-list"
                     style="max-height: 300px; overflow-y: auto"
                 ></ul>
+            </div>
+        </div>
+
+        <!-- Panel Mode Unggah -->
+        <div id="uploadPanel" style="display:none; margin-bottom: 14px; padding: 10px 12px; background: var(--bg-card); border-radius: 10px; border: 2px solid #3949ab; box-shadow: 0 2px 8px var(--shadow);">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <label id="uploadDropZone" style="
+                    flex:1; display:flex; align-items:center; justify-content:center;
+                    gap:6px; padding:9px 12px; border-radius:8px;
+                    background:#3949ab; color:#fff; font-size:13px; font-weight:bold;
+                    cursor:pointer; border:none;
+                ">
+                    📂 Tambah Excel
+                    <input id="uploadFileInput" type="file" accept=".xlsx" multiple style="display:none">
+                </label>
+                <span id="uploadFileCount" style="font-size:12px; color:var(--text-muted); white-space:nowrap;"></span>
+                <button id="deleteUploadBtn" style="
+                    padding:9px 11px; border-radius:8px; border:none;
+                    background:#b71c1c; color:#fff; font-size:13px;
+                    cursor:pointer; white-space:nowrap;
+                ">🗑️</button>
             </div>
         </div>
 
@@ -595,17 +630,21 @@
             let allData = [];
             let EXCEL_FILES = [];
             let selectedDiv = null;
+            let isUploadMode = false;
             const DB_NAME = "MatahariPromoCache";
             const STORE_NAME = "divisiData";
+            const UPLOAD_STORE = "uploadedFiles";
 
             // --- 1. INDEXED DB ---
             function openDB() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(DB_NAME, 1);
+                    const request = indexedDB.open(DB_NAME, 2);
                     request.onupgradeneeded = (e) => {
                         const db = e.target.result;
                         if (!db.objectStoreNames.contains(STORE_NAME))
                             db.createObjectStore(STORE_NAME);
+                        if (!db.objectStoreNames.contains(UPLOAD_STORE))
+                            db.createObjectStore(UPLOAD_STORE, { keyPath: "name" });
                     };
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject("Error DB");
@@ -628,15 +667,90 @@
                 tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
             }
 
+            // --- UPLOAD MODE: IndexedDB helpers ---
+            async function getUploadedFiles() {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(UPLOAD_STORE, "readonly");
+                    const req = tx.objectStore(UPLOAD_STORE).getAll();
+                    req.onsuccess = () => resolve(req.result);
+                });
+            }
+
+            async function saveUploadedFile(name, data) {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(UPLOAD_STORE, "readwrite");
+                    tx.objectStore(UPLOAD_STORE).put({ name, data });
+                    tx.oncomplete = resolve;
+                });
+            }
+
+            async function deleteAllUploadedFiles() {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(UPLOAD_STORE, "readwrite");
+                    tx.objectStore(UPLOAD_STORE).clear();
+                    tx.oncomplete = resolve;
+                });
+            }
+
+            async function renderUploadFileList() {
+                const files = await getUploadedFiles();
+                const countEl = document.getElementById("uploadFileCount");
+                countEl.textContent = files.length > 0 ? `${files.length} file` : "Kosong";
+            }
+
+            async function selectUploadMode() {
+                isUploadMode = true;
+                selectedDiv = "upload";
+                allData = [];
+                EXCEL_FILES = [];
+                resultsContainer.innerHTML = "";
+                searchInput.value = "";
+                document.getElementById("divisionOverlay").style.display = "none";
+                document.getElementById("titleApp").innerText = "Katalog Promo — Mode Unggah 📤";
+                document.getElementById("uploadPanel").style.display = "block";
+
+                await renderUploadFileList();
+
+                // Muat data dari cache unggahan
+                const files = await getUploadedFiles();
+                if (files.length > 0) {
+                    statusText.innerText = "⏳ Memuat data dari file yang diunggah...";
+                    loadingBar.style.width = "0%";
+                    const freshData = [];
+                    let loaded = 0;
+                    for (const f of files) {
+                        try {
+                            const wb = XLSX.read(f.data, { type: "array" });
+                            wb.SheetNames.forEach(sn => {
+                                freshData.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn]));
+                            });
+                            loaded++;
+                            loadingBar.style.width = `${(loaded / files.length) * 100}%`;
+                        } catch (e) { console.error(e); }
+                    }
+                    allData = freshData;
+                    EXCEL_FILES = files.map(f => f.name);
+                    statusText.innerText = `✅ ${files.length} file dimuat dari cache.`;
+                    enableSearch();
+                } else {
+                    statusText.innerText = "📂 Unggah file Excel untuk mulai pencarian.";
+                    searchInput.disabled = true;
+                }
+            }
+
             // --- 2. LOGIKA SINKRONISASI VERSI ---
             async function selectDivision(num) {
+                isUploadMode = false;
                 selectedDiv = num;
                 allData = [];
                 EXCEL_FILES = [];
                 resultsContainer.innerHTML = "";
                 searchInput.value = "";
-                document.getElementById("divisionOverlay").style.display =
-                    "none";
+                document.getElementById("divisionOverlay").style.display = "none";
+                document.getElementById("uploadPanel").style.display = "none";
 
                 const emojis = {
                     1: "Ladies 💃",
@@ -984,6 +1098,74 @@
                     : '<li class="file-item">Kosong</li>';
                 dbModal.style.display = "block";
             });
+
+            // --- UPLOAD MODE: Event handlers ---
+            document.getElementById("uploadDropZone").addEventListener("click", () => {
+                document.getElementById("uploadFileInput").click();
+            });
+
+            document.getElementById("uploadDropZone").addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.currentTarget.style.background = "rgba(57,73,171,0.12)";
+            });
+
+            document.getElementById("uploadDropZone").addEventListener("dragleave", (e) => {
+                e.currentTarget.style.background = "";
+            });
+
+            document.getElementById("uploadDropZone").addEventListener("drop", async (e) => {
+                e.preventDefault();
+                e.currentTarget.style.background = "";
+                const files = Array.from(e.dataTransfer.files).filter(f =>
+                    f.name.toLowerCase().endsWith(".xlsx") && !f.name.startsWith("~$")
+                );
+                if (files.length > 0) await processUploadedFiles(files);
+            });
+
+            document.getElementById("uploadFileInput").addEventListener("change", async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) await processUploadedFiles(files);
+                e.target.value = "";
+            });
+
+            document.getElementById("deleteUploadBtn").addEventListener("click", async () => {
+                if (!confirm("Hapus semua data Excel yang diunggah? Data tidak bisa dikembalikan.")) return;
+                await deleteAllUploadedFiles();
+                allData = [];
+                EXCEL_FILES = [];
+                resultsContainer.innerHTML = "";
+                searchInput.value = "";
+                searchInput.disabled = true;
+                document.getElementById("barcodeTypeInfo").style.display = "none";
+                clearSearchBtn.style.display = "none";
+                await renderUploadFileList();
+                statusText.innerText = "🗑️ Semua data diunggahan telah dihapus.";
+            });
+
+            async function processUploadedFiles(files) {
+                statusText.innerText = `⏳ Memproses ${files.length} file...`;
+                loadingBar.style.width = "0%";
+                let loaded = 0;
+                for (const file of files) {
+                    try {
+                        const buf = await file.arrayBuffer();
+                        const arr = new Uint8Array(buf);
+                        // Simpan ke IndexedDB
+                        await saveUploadedFile(file.name, arr);
+                        // Parse langsung ke allData
+                        const wb = XLSX.read(arr, { type: "array" });
+                        wb.SheetNames.forEach(sn => {
+                            allData.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn]));
+                        });
+                        if (!EXCEL_FILES.includes(file.name)) EXCEL_FILES.push(file.name);
+                        loaded++;
+                        loadingBar.style.width = `${(loaded / files.length) * 100}%`;
+                    } catch (e) { console.error(e); }
+                }
+                await renderUploadFileList();
+                statusText.innerText = `✅ ${loaded} file berhasil ditambahkan. Total: ${EXCEL_FILES.length} file.`;
+                enableSearch();
+            }
 
             closeModal.onclick = () => (dbModal.style.display = "none");
             window.onclick = (e) => {
