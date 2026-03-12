@@ -143,6 +143,32 @@
             font-size: 12px; color: var(--text-muted); padding: 8px; 
             text-align: center; border-radius: 6px; display: none;
         }
+        
+        #barcodeTypeInfo {
+            display: none; margin-top: 8px; padding: 10px 12px; 
+            background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 6px; 
+            font-size: 12px; color: #1565c0; font-weight: bold;
+        }
+        
+        [data-theme="dark"] #barcodeTypeInfo {
+            background: #1e3a5f; border-left-color: #64b5f6; color: #64b5f6;
+        }
+        
+        #barcodeTypeInfo [style*="background: #2196F3"] {
+            background: #2196F3 !important;
+        }
+        
+        [data-theme="dark"] #barcodeTypeInfo [style*="background: #2196F3"] {
+            background: #1976D2 !important;
+        }
+        
+        #barcodeTypeInfo code {
+            background: #f0f0f0; color: #333; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: 'Courier New', monospace;
+        }
+        
+        [data-theme="dark"] #barcodeTypeInfo code {
+            background: #333; color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -181,9 +207,13 @@
     </div>
 
     <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
+    <div id="barcodeTypeInfo">
+        <span style="display: inline-block; background: #2196F3; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-right: 8px;">BARCODE</span>
+        <span id="barcodeTypeTag"></span>
+    </div>
     
     <div class="camera-section">
-        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA</label>
+        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA <span style="font-weight: normal; color: #666; font-size: 11px;">(QR, EAN-13, EAN-8, Code 128, Code 39)</span></label>
         <video id="cameraVideo" playsinline autoplay></video>
         <canvas id="cameraCanvas"></canvas>
         <div class="camera-controls">
@@ -497,125 +527,47 @@
     window.onclick = (e) => { if(e.target == dbModal) dbModal.style.display = "none"; }
     
     // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
-    function processBarcodeSearch(barcode) {
+    let detectedBarcodeType = '';
+    
+    function getBarcodeTypeName(format) {
+        const barcodeFormats = {
+            'ean': '📦 EAN-13 (Retail)',
+            'ean_13': '📦 EAN-13 (Retail)',
+            'ean13': '📦 EAN-13 (Retail)',
+            'ean_8': '📦 EAN-8 (Mini)',
+            'ean8': '📦 EAN-8 (Mini)',
+            'code_128': '📋 Code 128 (Data)',
+            'code128': '📋 Code 128 (Data)',
+            'code_39': '📋 Code 39 (Alphanum)',
+            'code39': '📋 Code 39 (Alphanum)'
+        };
+        
+        const key = String(format).toLowerCase();
+        return barcodeFormats[key] || format || 'Linear Barcode';
+    }
+    
+    function processBarcodeSearch(barcode, barcodeType = 'UNKNOWN') {
         if (!selectedDiv) {
             showCameraStatus('❌ Pilih divisi terlebih dahulu', 'error');
             return;
         }
         
-        const query = barcode.toLowerCase();
-        resultsContainer.innerHTML = '';
-
-        const now = new Date();
-        const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
-        const checkTime = new Date(jakartaTime.getTime() - 60000); 
-        const year = checkTime.getFullYear();
-        const month = String(checkTime.getMonth() + 1).padStart(2, '0');
-        const day = String(checkTime.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
-
-        const filtered = allData.filter(item => {
-            const s = String(item.SKU || '').toLowerCase();
-            const a = String(item.ARTICLE || '').toLowerCase();
-            const d = String(item.DESCRIPTION || '').toLowerCase();
-            return s.includes(query) || a.includes(query) || d.includes(query);
-        }).sort((a, b) => {
-            const dateA = parseToDate(a['FROM DATE'] || a['FROM_DATE']);
-            const dateB = parseToDate(b['FROM DATE'] || b['FROM_DATE']);
-            const timeA = dateA ? dateA.getTime() : 0;
-            const timeB = dateB ? dateB.getTime() : 0;
-            return timeB - timeA;
-        }).slice(0, 30);
-
-        if (filtered.length === 0) {
-            showCameraStatus(`Barcode '${barcode}' tidak ditemukan`, 'error');
-            return;
-        }
-
-        const skuLatestDate = {};
-        filtered.forEach(item => {
-            const sku = String(item.SKU || '').trim();
-            if (sku) {
-                const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
-                const fromDateNum = fromDate ? fromDate.getTime() : 0;
-                if (!skuLatestDate[sku] || fromDateNum > skuLatestDate[sku]) {
-                    skuLatestDate[sku] = fromDateNum;
-                }
-            }
-        });
-
-        filtered.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
-            const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
-            const discountLabel = formatDiscount(item.DISKON);
-            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
-            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
-            const isSharp = discountLabel === "SHARP"; 
-            
-            const sku = String(item.SKU || '').trim();
-            const fromDateNum = fromDate ? fromDate.getTime() : 0;
-            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
-            
-            let statusHtml = '';
-
-            if (fromDate && toDate) {
-                const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
-                const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
-                
-                let label = "";
-                let css = "";
-
-                if (todayStr > tStr) {
-                    label = "BERAKHIR";
-                    css = "status-non";
-                } else if (todayStr >= fStr && todayStr <= tStr) {
-                    label = "Aktif";
-                    css = "status-aktif";
-                } else {
-                    label = "Non-Aktif";
-                    css = "status-non";
-                }
-                
-                statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
-            }
-
-            let normalStyle = "";
-            let prefix = "";
-            if (isSharp) normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
-            else if (hasSpecialChars) { normalStyle = "text-decoration: none;"; prefix = "@"; }
-
-            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
-
-            card.innerHTML = `
-                <div class="sku-row">
-                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ''}</div>
-                    <div class="badge-acara">${item.ACARA || 'PROMO'}</div>
-                </div>
-                <div class="article-name">${item.ARTICLE || 'Tanpa Nama Artikel'}</div>
-                <div class="description">${item.DESCRIPTION || ''}</div>
-                <div class="period-row">
-                    <div class="period-box">📅 ${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}</div>
-                    ${statusHtml}
-                </div>
-                <div class="price-container">
-                    <div>
-                        <div class="price-normal" style="${normalStyle}">
-                            ${prefix}${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
-                        </div>
-                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPriceRaw)}</div>`}
-                    </div>
-                    <div style="text-align:right">
-                        <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
-                        <div class="discount-tag">${discountLabel}</div>
-                    </div>
-                </div>
-            `;
-            resultsContainer.appendChild(card);
-        });
+        detectedBarcodeType = barcodeType;
         
-        showCameraStatus(`✅ Ditemukan ${filtered.length} hasil untuk '${barcode}'`, 'success');
+        // Isi textbox searchInput dengan barcode
+        searchInput.value = barcode;
+        
+        // Tampilkan info tipe barcode
+        const barcodeTypeInfo = document.getElementById('barcodeTypeInfo');
+        const barcodeTypeTag = document.getElementById('barcodeTypeTag');
+        barcodeTypeTag.innerHTML = `<strong>${barcodeType}</strong> | <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${barcode}</code>`;
+        barcodeTypeInfo.style.display = 'block';
+        
+        // Trigger input event untuk menjalankan search
+        const event = new Event('input', { bubbles: true });
+        searchInput.dispatchEvent(event);
+        
+        showCameraStatus(`✅ ${barcodeType} terdeteksi`, 'success');
         
         if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
@@ -730,7 +682,7 @@
                 const barcode = qrCode.data.trim();
                 if (barcode.length >= 2) {
                     stopCamera();
-                    processBarcodeSearch(barcode);
+                    processBarcodeSearch(barcode, 'QR Code');
                     return;
                 }
             }
@@ -752,9 +704,10 @@
                 }, (result) => {
                     if (result && result.codeResult && cameraActive) {
                         const barcode = result.codeResult.code.trim();
+                        const barcodeType = getBarcodeTypeName(result.codeResult.format);
                         if (barcode.length >= 2) {
                             stopCamera();
-                            processBarcodeSearch(barcode);
+                            processBarcodeSearch(barcode, barcodeType);
                             return;
                         }
                     }
