@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Promo Searcher - Matahari</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0"></script>
     <style>
         :root {
             --bg-body: #f4f7f6;
@@ -118,9 +117,15 @@
             border: 2px solid #2196F3; box-shadow: 0 2px 10px var(--shadow);
         }
         
+        .camera-preview-container {
+            position: relative; width: 100%; aspect-ratio: 2.5 / 1;
+            background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px;
+            display: none;
+        }
+        
         #cameraVideo { 
-            width: 100%; max-width: 100%; border-radius: 8px; 
-            background: #000; display: none; margin-bottom: 10px;
+            width: 100%; height: 100%; object-fit: cover; 
+            transform: scale(2);
         }
         
         #cameraCanvas { display: none; }
@@ -241,7 +246,9 @@
     
     <div class="camera-section">
         <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA <span style="font-weight: normal; color: #666; font-size: 11px;">(QR, EAN-13, EAN-8, Code 128, Code 39)</span></label>
-        <video id="cameraVideo" playsinline autoplay></video>
+        <div class="camera-preview-container">
+            <video id="cameraVideo" playsinline autoplay muted></video>
+        </div>
         <canvas id="cameraCanvas"></canvas>
         <div class="camera-controls">
             <button id="cameraToggleBtn" class="camera-toggle">🎥 Aktifkan Kamera</button>
@@ -575,21 +582,16 @@
     // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
     let detectedBarcodeType = '';
     
-    function getBarcodeTypeName(format) {
+    function getBarcodeTypeNameZXing(format) {
         const barcodeFormats = {
-            'ean': '📦 EAN-13 (Retail)',
-            'ean_13': '📦 EAN-13 (Retail)',
-            'ean13': '📦 EAN-13 (Retail)',
-            'ean_8': '📦 EAN-8 (Mini)',
-            'ean8': '📦 EAN-8 (Mini)',
-            'code_128': '📋 Code 128 (Data)',
-            'code128': '📋 Code 128 (Data)',
-            'code_39': '📋 Code 39 (Alphanum)',
-            'code39': '📋 Code 39 (Alphanum)'
+            '0': '📦 QR Code',
+            '1': '📦 EAN-13 (Retail)',
+            '2': '📦 EAN-8 (Mini)',
+            '8': '📋 Code 128 (Data)',
+            '9': '📋 Code 39 (Alphanum)'
         };
         
-        const key = String(format).toLowerCase();
-        return barcodeFormats[key] || format || 'Linear Barcode';
+        return barcodeFormats[String(format)] || 'Linear Barcode';
     }
     
     function processBarcodeSearch(barcode, barcodeType = 'UNKNOWN') {
@@ -658,7 +660,7 @@
             
             cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
             cameraVideo.srcObject = cameraStream;
-            cameraVideo.style.display = 'block';
+            document.querySelector('.camera-preview-container').style.display = 'block';
             cameraActive = true;
             cameraToggleBtn.classList.add('active');
             cameraToggleBtn.innerHTML = '❌ Matikan Kamera';
@@ -682,7 +684,7 @@
             cameraStream.getTracks().forEach(track => track.stop());
             cameraStream = null;
         }
-        cameraVideo.style.display = 'none';
+        document.querySelector('.camera-preview-container').style.display = 'none';
         cameraVideo.srcObject = null;
         cameraActive = false;
         detectionRunning = false;
@@ -694,6 +696,8 @@
     function startBarcodeDetection() {
         if (detectionRunning) return;
         detectionRunning = true;
+
+        const codeReader = new ZXing.BrowserMultiFormatReader();
 
         function detectFrame() {
             // Cek apakah video sudah siap
@@ -719,45 +723,35 @@
                 return;
             }
             
-            const imageData = ctx.getImageData(0, 0, cameraCanvas.width, cameraCanvas.height);
-            
-            // Deteksi QR Code dengan jsQR setiap frame
-            const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
-            
-            if (qrCode) {
-                const barcode = qrCode.data.trim();
-                if (barcode.length >= 2) {
-                    stopCamera();
-                    processBarcodeSearch(barcode, 'QR Code');
-                    return;
-                }
-            }
-            
-            // Deteksi barcode linear (EAN, Code128) dengan cooldown untuk efisiensi
-            const now = Date.now();
-            if (now - lastDetectionTime > DETECTION_COOLDOWN) {
-                lastDetectionTime = now;
+            // Deteksi barcode menggunakan ZXing (1D & 2D)
+            try {
+                const image = ctx.getImageData(0, 0, cameraCanvas.width, cameraCanvas.height);
+                const luminanceSource = new ZXing.RGBLuminanceSource(image.data, image.width, image.height);
+                const binarizer = new ZXing.HybridBinarizer(luminanceSource);
+                const binaryBitmap = new ZXing.BinaryBitmap(binarizer);
+                const hints = new Map();
+                hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                    ZXing.BarcodeFormat.QR_CODE,
+                    ZXing.BarcodeFormat.EAN_13,
+                    ZXing.BarcodeFormat.EAN_8,
+                    ZXing.BarcodeFormat.CODE_128,
+                    ZXing.BarcodeFormat.CODE_39
+                ]);
+                const reader = new ZXing.MultiFormatReader();
+                reader.setHints(hints);
+                const result = reader.decode(binaryBitmap);
                 
-                Quagga.decodeSingle({
-                    src: cameraCanvas.toDataURL('image/png'),
-                    numOfWorkers: 0,
-                    inputStream: {
-                        size: 800
-                    },
-                    decoder: {
-                        readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader']
+                if (result) {
+                    const barcode = result.text.trim();
+                    const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                    if (barcode.length >= 2) {
+                        stopCamera();
+                        processBarcodeSearch(barcode, barcodeType);
+                        return;
                     }
-                }, (result) => {
-                    if (result && result.codeResult && cameraActive) {
-                        const barcode = result.codeResult.code.trim();
-                        const barcodeType = getBarcodeTypeName(result.codeResult.format);
-                        if (barcode.length >= 2) {
-                            stopCamera();
-                            processBarcodeSearch(barcode, barcodeType);
-                            return;
-                        }
-                    }
-                });
+                }
+            } catch (e) {
+                // No barcode found, continue scanning
             }
 
             if (cameraActive) {
