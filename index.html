@@ -118,7 +118,7 @@
         }
         
         .camera-preview-container {
-            position: relative; width: 100%; aspect-ratio: 2.5 / 1;
+            position: relative; width: 100%; aspect-ratio: 2 / 1;
             background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px;
             display: none;
         }
@@ -697,8 +697,6 @@
         if (detectionRunning) return;
         detectionRunning = true;
 
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-
         function detectFrame() {
             // Cek apakah video sudah siap
             if (!cameraActive || cameraVideo.readyState !== cameraVideo.HAVE_ENOUGH_DATA) {
@@ -713,19 +711,43 @@
             }
 
             const ctx = cameraCanvas.getContext('2d');
-            cameraCanvas.width = cameraVideo.videoWidth;
-            cameraCanvas.height = cameraVideo.videoHeight;
+            const videoWidth = cameraVideo.videoWidth;
+            const videoHeight = cameraVideo.videoHeight;
+            
+            // Canvas untuk menampung video penuh
+            cameraCanvas.width = videoWidth;
+            cameraCanvas.height = videoHeight;
             
             try {
-                ctx.drawImage(cameraVideo, 0, 0);
+                ctx.drawImage(cameraVideo, 0, 0, videoWidth, videoHeight);
             } catch (e) {
                 requestAnimationFrame(detectFrame);
                 return;
             }
             
-            // Deteksi barcode menggunakan ZXing (1D & 2D)
+            // Hitung area preview yang zoom 2x (center portion)
+            // Dengan scale(2), hanya 50% dari center yang terlihat
+            const centerX = videoWidth / 2;
+            const centerY = videoHeight / 2;
+            const cropWidth = videoWidth / 2;  // 50% dari width
+            const cropHeight = videoHeight / 2; // 50% dari height
+            
+            const cropX = centerX - (cropWidth / 2);
+            const cropY = centerY - (cropHeight / 2);
+            
+            // Extract cropped image data (area yang terlihat di preview)
+            const croppedImageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+            
+            // Canvas untuk deteksi barcode (hanya area yang terlihat)
+            const detectionCanvas = document.createElement('canvas');
+            detectionCanvas.width = cropWidth;
+            detectionCanvas.height = cropHeight;
+            const detectionCtx = detectionCanvas.getContext('2d');
+            detectionCtx.putImageData(croppedImageData, 0, 0);
+            
+            // Deteksi barcode menggunakan ZXing pada area yang terlihat
             try {
-                const image = ctx.getImageData(0, 0, cameraCanvas.width, cameraCanvas.height);
+                const image = detectionCtx.getImageData(0, 0, cropWidth, cropHeight);
                 const luminanceSource = new ZXing.RGBLuminanceSource(image.data, image.width, image.height);
                 const binarizer = new ZXing.HybridBinarizer(luminanceSource);
                 const binaryBitmap = new ZXing.BinaryBitmap(binarizer);
