@@ -313,6 +313,33 @@
                 background: #d32f2f;
             }
 
+            .torch-toggle {
+                flex: 1;
+                min-width: 120px;
+                padding: 12px 15px;
+                background: #555;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+                display: none;
+            }
+
+            .torch-toggle:hover {
+                background: #333;
+            }
+
+            .torch-toggle.on {
+                background: #f9a825;
+                color: #000;
+            }
+
+            .torch-toggle.on:hover {
+                background: #f57f17;
+            }
+
             .camera-status {
                 font-size: 12px;
                 color: var(--text-muted);
@@ -529,7 +556,12 @@
                 <span id="barcodeTypeTag"></span>
             </div>
 
-            <div class="camera-section">
+            <!-- kontainer kamera aktif "style=display: block", kontainer kamera off "style=display: none"-->
+            <div
+                class="camera-section"
+                id="cameraSectionWrapper"
+                style="display: none" // default kamera aktif, bisa diubah ke "none" untuk nonaktifkan kamera saat load awal
+            >
                 <label
                     style="
                         display: block;
@@ -548,6 +580,9 @@
                 <div class="camera-controls">
                     <button id="cameraToggleBtn" class="camera-toggle">
                         🎥 Aktifkan Kamera
+                    </button>
+                    <button id="torchBtn" class="torch-toggle">
+                        🔦 Senter
                     </button>
                 </div>
                 <div id="cameraStatus" class="camera-status"></div>
@@ -1024,6 +1059,52 @@
 
             // ZXing BrowserMultiFormatReader untuk deteksi barcode
             let barcodeReader = null;
+            let torchOn = false;
+            let activeVideoTrack = null;
+
+            const torchBtn = document.getElementById("torchBtn");
+
+            async function toggleTorch() {
+                if (!activeVideoTrack) return;
+
+                const capabilities = activeVideoTrack.getCapabilities();
+                if (!capabilities.torch) {
+                    showCameraStatus(
+                        "❌ Senter tidak didukung di perangkat ini",
+                        "error",
+                    );
+                    return;
+                }
+
+                torchOn = !torchOn;
+                try {
+                    await activeVideoTrack.applyConstraints({
+                        advanced: [{ torch: torchOn }],
+                    });
+                    torchBtn.classList.toggle("on", torchOn);
+                    torchBtn.innerHTML = torchOn ? "🔦 Senter ON" : "🔦 Senter";
+                } catch (e) {
+                    console.error("Gagal toggle senter:", e);
+                    torchOn = !torchOn;
+                }
+            }
+
+            async function stopTorch() {
+                if (activeVideoTrack && torchOn) {
+                    try {
+                        await activeVideoTrack.applyConstraints({
+                            advanced: [{ torch: false }],
+                        });
+                    } catch (_) {}
+                }
+                torchOn = false;
+                activeVideoTrack = null;
+                torchBtn.classList.remove("on");
+                torchBtn.innerHTML = "🔦 Senter";
+                torchBtn.style.display = "none";
+            }
+
+            torchBtn.addEventListener("click", toggleTorch);
 
             function showCameraStatus(message, type = "info") {
                 cameraStatus.textContent = message;
@@ -1104,6 +1185,7 @@
                                     cameraToggleBtn.innerHTML =
                                         "🎥 Aktifkan Kamera";
 
+                                    stopTorch();
                                     processBarcodeSearch(barcode, barcodeType);
                                     return;
                                 }
@@ -1117,6 +1199,18 @@
                             }
                         },
                     );
+
+                    // Ambil video track untuk kontrol senter
+                    const stream = cameraVideo.srcObject;
+                    if (stream) {
+                        activeVideoTrack = stream.getVideoTracks()[0] || null;
+                        if (activeVideoTrack) {
+                            const cap = activeVideoTrack.getCapabilities();
+                            if (cap.torch) {
+                                torchBtn.style.display = "block";
+                            }
+                        }
+                    }
 
                     showCameraStatus(
                         "✅ Kamera siap. Arahkan ke barcode/QR code",
@@ -1138,6 +1232,8 @@
                 if (barcodeReader) {
                     barcodeReader.reset();
                 }
+
+                stopTorch();
 
                 document.querySelector(
                     ".camera-preview-container",
