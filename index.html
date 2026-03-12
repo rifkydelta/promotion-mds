@@ -169,6 +169,30 @@
         [data-theme="dark"] #barcodeTypeInfo code {
             background: #333; color: #e0e0e0;
         }
+        
+        .search-container {
+            position: relative; width: 100%;
+        }
+        
+        .search-container .search-box {
+            width: 100%; padding-right: 45px;
+        }
+        
+        #clearSearchBtn {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--text-muted); 
+            font-size: 20px; cursor: pointer; padding: 0; width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: all 0.3s;
+        }
+        
+        #clearSearchBtn:hover {
+            background: var(--shadow); color: var(--text-main);
+        }
+        
+        #clearSearchBtn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -206,7 +230,10 @@
         <div id="status">Memuat data...</div>
     </div>
 
-    <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
+        <button id="clearSearchBtn" type="button" style="display: none;">✕</button>
+    </div>
     <div id="barcodeTypeInfo">
         <span style="display: inline-block; background: #2196F3; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-right: 8px;">BARCODE</span>
         <span id="barcodeTypeTag"></span>
@@ -382,6 +409,25 @@
     const resultsContainer = document.getElementById('results');
     const statusText = document.getElementById('status');
     const loadingBar = document.getElementById('loadingBar');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
+    // Clear search button functionality
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        resultsContainer.innerHTML = '';
+        document.getElementById('barcodeTypeInfo').style.display = 'none';
+        clearSearchBtn.style.display = 'none';
+        searchInput.focus();
+    });
+    
+    searchInput.addEventListener('input', () => {
+        // Toggle clear button visibility
+        if (searchInput.value.length > 0) {
+            clearSearchBtn.style.display = 'flex';
+        } else {
+            clearSearchBtn.style.display = 'none';
+        }
+    });
 
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
