@@ -1,540 +1,937 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Promo Searcher - Matahari</title>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script async src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
-    <style>
-        :root {
-            --bg-body: #f4f7f6;
-            --bg-card: #ffffff;
-            --text-main: #2c3e50;
-            --text-muted: #636e72;
-            --text-sku: #555555;
-            --border-pink: #d81b60;
-            --bg-period: #fff9c4;
-            --text-period: #f57f17;
-            --input-bg: #ffffff;
-            --input-border: #d81b60;
-            --shadow: rgba(0,0,0,0.1);
-            --status-aktif: #27ae60;
-            --status-non: #e74c3c;
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Promo Searcher - Matahari</title>
+        <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+        <script
+            async
+            src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"
+        ></script>
+        <style>
+            :root {
+                --bg-body: #f4f7f6;
+                --bg-card: #ffffff;
+                --text-main: #2c3e50;
+                --text-muted: #636e72;
+                --text-sku: #555555;
+                --border-pink: #d81b60;
+                --bg-period: #fff9c4;
+                --text-period: #f57f17;
+                --input-bg: #ffffff;
+                --input-border: #d81b60;
+                --shadow: rgba(0, 0, 0, 0.1);
+                --status-aktif: #27ae60;
+                --status-non: #e74c3c;
+            }
 
-        [data-theme="dark"] {
-            --bg-body: #121212;
-            --bg-card: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #b0b0b0;
-            --text-sku: #999999;
-            --border-pink: #ff4081;
-            --bg-period: #332b00;
-            --text-period: #ffeb3b;
-            --input-bg: #2d2d2d;
-            --input-border: #ff4081;
-            --shadow: rgba(0,0,0,0.4);
-        }
+            [data-theme="dark"] {
+                --bg-body: #121212;
+                --bg-card: #1e1e1e;
+                --text-main: #e0e0e0;
+                --text-muted: #b0b0b0;
+                --text-sku: #999999;
+                --border-pink: #ff4081;
+                --bg-period: #332b00;
+                --text-period: #ffeb3b;
+                --input-bg: #2d2d2d;
+                --input-border: #ff4081;
+                --shadow: rgba(0, 0, 0, 0.4);
+            }
 
-        body { 
-            font-family: -apple-system, sans-serif; 
-            background: var(--bg-body); 
-            color: var(--text-main); 
-            padding: 20px; 
-            transition: background 0.3s, color 0.3s;
-            padding-bottom: 80px;
-        }
+            body {
+                font-family: -apple-system, sans-serif;
+                background: var(--bg-body);
+                color: var(--text-main);
+                padding: 20px;
+                transition:
+                    background 0.3s,
+                    color 0.3s;
+                padding-bottom: 80px;
+            }
 
-        .container { max-width: 800px; margin: 0 auto; }
-        .header-app { text-align: center; margin-bottom: 25px; }
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            .header-app {
+                text-align: center;
+                margin-bottom: 25px;
+            }
 
-        .controls-bottom {
-            position: fixed; bottom: 20px; left: 20px; 
-            display: flex; gap: 10px; z-index: 1000;
-        }
-
-        @media (max-width: 1024px) {
             .controls-bottom {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                display: flex;
+                gap: 10px;
+                z-index: 1000;
+            }
+
+            @media (max-width: 1024px) {
+                .controls-bottom {
+                    left: 0;
+                    right: 0;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                }
+            }
+
+            .btn-float {
+                background: var(--bg-card);
+                border: 2px solid var(--input-border);
+                color: var(--text-main);
+                padding: 10px 16px;
+                border-radius: 30px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: bold;
+                box-shadow: 0 4px 12px var(--shadow);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .search-box {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+                border: 2px solid var(--input-border);
+                border-radius: 12px;
+                box-sizing: border-box;
+                outline: none;
+                background: var(--input-bg);
+                color: var(--text-main);
+                box-shadow: 0 4px 10px var(--shadow);
+            }
+
+            #status {
+                font-size: 13px;
+                color: var(--text-muted);
+                margin: 15px 0;
+                text-align: center;
+            }
+
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 2000;
                 left: 0;
-                right: 0;
-                justify-content: center;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+            }
+            .modal-content {
+                background-color: var(--bg-card);
+                margin: 15% auto;
+                padding: 20px;
+                border-radius: 15px;
+                width: 80%;
+                max-width: 500px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            }
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--text-muted);
+                padding-bottom: 10px;
+            }
+            .file-list {
+                margin-top: 15px;
+                list-style: none;
+                padding: 0;
+            }
+            .file-item {
+                padding: 10px;
+                border-bottom: 1px solid var(--shadow);
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .file-item:before {
+                content: "📄";
+            }
+
+            .card {
+                background: var(--bg-card);
+                border-radius: 12px;
+                padding: 18px;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 10px var(--shadow);
+                border-top: 4px solid var(--border-pink);
+            }
+            .sku-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .sku-text {
+                font-size: 13px;
+                color: var(--text-sku);
+                font-weight: bold;
+            }
+            .brand-text {
+                color: var(--border-pink);
+                font-weight: normal;
+            }
+            .badge-acara {
+                background: #fce4ec;
+                color: #ad1457;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            .article-name {
+                font-weight: bold;
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+            .description {
+                font-size: 13px;
+                color: var(--text-muted);
+                margin-bottom: 10px;
+            }
+            .period-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 15px;
                 flex-wrap: wrap;
             }
-        }
+            .period-box {
+                background: var(--bg-period);
+                color: var(--text-period);
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .status-label {
+                font-size: 11px;
+                font-weight: 900;
+                text-transform: uppercase;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid currentColor;
+            }
+            .status-aktif {
+                color: var(--status-aktif);
+            }
+            .status-non {
+                color: var(--status-non);
+            }
+            .price-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                padding-top: 10px;
+                border-top: 1px dashed var(--text-muted);
+            }
+            .price-promo {
+                font-size: 24px;
+                font-weight: 800;
+                color: #ff2b2b;
+            }
+            .price-normal {
+                text-decoration: line-through;
+                color: var(--text-muted);
+                font-size: 14px;
+            }
+            .discount-tag {
+                color: var(--border-pink);
+                font-weight: bold;
+                font-size: 18px;
+            }
+            .loading-progress {
+                height: 4px;
+                background: var(--border-pink);
+                width: 0%;
+                transition: width 0.3s;
+                margin-bottom: 10px;
+            }
 
-        .btn-float {
-            background: var(--bg-card); border: 2px solid var(--input-border);
-            color: var(--text-main); padding: 10px 16px; border-radius: 30px;
-            cursor: pointer; font-size: 14px; font-weight: bold;
-            box-shadow: 0 4px 12px var(--shadow); display: flex; align-items: center; gap: 8px;
-        }
+            .camera-section {
+                margin: 20px 0;
+                padding: 15px;
+                background: var(--bg-card);
+                border-radius: 12px;
+                border: 2px solid #2196f3;
+                box-shadow: 0 2px 10px var(--shadow);
+            }
 
-        .search-box { 
-            width: 100%; padding: 15px; font-size: 16px; 
-            border: 2px solid var(--input-border); border-radius: 12px; 
-            box-sizing: border-box; outline: none; background: var(--input-bg);
-            color: var(--text-main); box-shadow: 0 4px 10px var(--shadow);
-        }
+            .camera-preview-container {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 2 / 1;
+                background: #000;
+                border-radius: 8px;
+                overflow: hidden;
+                margin-bottom: 10px;
+                display: none;
+            }
 
-        #status { font-size: 13px; color: var(--text-muted); margin: 15px 0; text-align: center; }
-        
-        .modal {
-            display: none; position: fixed; z-index: 2000;
-            left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: var(--bg-card); margin: 15% auto;
-            padding: 20px; border-radius: 15px; width: 80%; max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--text-muted); padding-bottom: 10px; }
-        .file-list { margin-top: 15px; list-style: none; padding: 0; }
-        .file-item { padding: 10px; border-bottom: 1px solid var(--shadow); font-size: 14px; display: flex; align-items: center; gap: 10px; }
-        .file-item:before { content: "📄"; }
+            #cameraVideo {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transform: scale(2);
+            }
 
-        .card { background: var(--bg-card); border-radius: 12px; padding: 18px; margin-bottom: 15px; box-shadow: 0 2px 10px var(--shadow); border-top: 4px solid var(--border-pink); }
-        .sku-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .sku-text { font-size: 13px; color: var(--text-sku); font-weight: bold; }
-        .brand-text { color: var(--border-pink); font-weight: normal; }
-        .badge-acara { background: #fce4ec; color: #ad1457; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; }
-        .article-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-        .description { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
-        .period-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .period-box { background: var(--bg-period); color: var(--text-period); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
-        .status-label { font-size: 11px; font-weight: 900; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid currentColor; }
-        .status-aktif { color: var(--status-aktif); }
-        .status-non { color: var(--status-non); }
-        .price-container { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; border-top: 1px dashed var(--text-muted); }
-        .price-promo { font-size: 24px; font-weight: 800; color: #ff2b2b; }
-        .price-normal { text-decoration: line-through; color: var(--text-muted); font-size: 14px; }
-        .discount-tag { color: var(--border-pink); font-weight: bold; font-size: 18px; }
-        .loading-progress { height: 4px; background: var(--border-pink); width: 0%; transition: width 0.3s; margin-bottom: 10px; }
-        
-        .camera-section { 
-            margin: 20px 0; padding: 15px; background: var(--bg-card); border-radius: 12px; 
-            border: 2px solid #2196F3; box-shadow: 0 2px 10px var(--shadow);
-        }
-        
-        .camera-preview-container {
-            position: relative; width: 100%; aspect-ratio: 2 / 1;
-            background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 10px;
-            display: none;
-        }
-        
-        #cameraVideo { 
-            width: 100%; height: 100%; object-fit: cover; 
-            transform: scale(2);
-        }
-        
-        #cameraCanvas { display: none; }
-        
-        .camera-controls {
-            display: flex; gap: 10px; flex-wrap: wrap;
-        }
-        
-        .camera-toggle { 
-            flex: 1; min-width: 150px; padding: 12px 15px; 
-            background: #2196F3; color: white; border: none; 
-            border-radius: 8px; cursor: pointer; font-weight: bold;
-            transition: background 0.3s;
-        }
-        
-        .camera-toggle:hover { background: #1976D2; }
-        .camera-toggle.active { background: #d32f2f; }
-        
-        .camera-status {
-            font-size: 12px; color: var(--text-muted); padding: 8px; 
-            text-align: center; border-radius: 6px; display: none;
-        }
-        
-        #barcodeTypeInfo {
-            display: none; margin-top: 8px; padding: 10px 12px; 
-            background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 6px; 
-            font-size: 12px; color: #1565c0; font-weight: bold;
-        }
-        
-        [data-theme="dark"] #barcodeTypeInfo {
-            background: #1e3a5f; border-left-color: #64b5f6; color: #64b5f6;
-        }
-        
-        #barcodeTypeInfo [style*="background: #2196F3"] {
-            background: #2196F3 !important;
-        }
-        
-        [data-theme="dark"] #barcodeTypeInfo [style*="background: #2196F3"] {
-            background: #1976D2 !important;
-        }
-        
-        #barcodeTypeInfo code {
-            background: #f0f0f0; color: #333; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: 'Courier New', monospace;
-        }
-        
-        [data-theme="dark"] #barcodeTypeInfo code {
-            background: #333; color: #e0e0e0;
-        }
-        
-        .search-container {
-            position: relative; width: 100%;
-        }
-        
-        .search-container .search-box {
-            width: 100%; padding-right: 45px;
-        }
-        
-        #clearSearchBtn {
-            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            background: none; border: none; color: var(--text-muted); 
-            font-size: 20px; cursor: pointer; padding: 0; width: 30px; height: 30px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; transition: all 0.3s;
-        }
-        
-        #clearSearchBtn:hover {
-            background: var(--shadow); color: var(--text-main);
-        }
-        
-        #clearSearchBtn:active {
-            transform: translateY(-50%) scale(0.95);
-        }
-    </style>
-</head>
-<body>
+            #cameraCanvas {
+                display: none;
+            }
 
-<div id="divisionOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-body); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-    <h2 style="margin-bottom:30px;">Pilih Divisi Matahari</h2>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:400px; width:90%;">
-        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(1)">DIVISI 1</button>
-        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(2)">DIVISI 2</button>
-        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(3)">DIVISI 3</button>
-        <button class="btn-float" style="justify-content:center; padding:30px;" onclick="selectDivision(4)">DIVISI 4</button>
-    </div>
-</div>
+            .camera-controls {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
 
-<div class="controls-bottom">
-    <button id="themeToggle" class="btn-float">🌙 Mode Gelap</button>
-    <button onclick="document.getElementById('divisionOverlay').style.display='flex'" class="btn-float">🏢 Ganti Divisi</button>
-    <button id="dbToggle" class="btn-float">📁 Database</button>
-</div>
+            .camera-toggle {
+                flex: 1;
+                min-width: 150px;
+                padding: 12px 15px;
+                background: #2196f3;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+            }
 
-<div id="dbModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 style="margin:0">Database Terpasang</h3>
-            <span id="closeModal" style="cursor:pointer; font-size:24px;">&times;</span>
+            .camera-toggle:hover {
+                background: #1976d2;
+            }
+            .camera-toggle.active {
+                background: #d32f2f;
+            }
+
+            .camera-status {
+                font-size: 12px;
+                color: var(--text-muted);
+                padding: 8px;
+                text-align: center;
+                border-radius: 6px;
+                display: none;
+            }
+
+            .camera-source-select {
+                display: none;
+                margin-top: 10px;
+            }
+
+            .camera-source-select label {
+                font-size: 12px;
+                color: var(--text-muted);
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            .camera-source-select select {
+                width: 100%;
+                padding: 8px 10px;
+                border-radius: 8px;
+                border: 1px solid var(--input-border);
+                background: var(--input-bg);
+                color: var(--text-main);
+                font-size: 13px;
+                outline: none;
+            }
+
+            #barcodeTypeInfo {
+                display: none;
+                margin-top: 8px;
+                padding: 10px 12px;
+                background: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                border-radius: 6px;
+                font-size: 12px;
+                color: #1565c0;
+                font-weight: bold;
+            }
+
+            [data-theme="dark"] #barcodeTypeInfo {
+                background: #1e3a5f;
+                border-left-color: #64b5f6;
+                color: #64b5f6;
+            }
+
+            #barcodeTypeInfo [style*="background: #2196F3"] {
+                background: #2196f3 !important;
+            }
+
+            [data-theme="dark"]
+                #barcodeTypeInfo
+                [style*="background: #2196F3"] {
+                background: #1976d2 !important;
+            }
+
+            #barcodeTypeInfo code {
+                background: #f0f0f0;
+                color: #333;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-family: "Courier New", monospace;
+            }
+
+            [data-theme="dark"] #barcodeTypeInfo code {
+                background: #333;
+                color: #e0e0e0;
+            }
+
+            .search-container {
+                position: relative;
+                width: 100%;
+            }
+
+            .search-container .search-box {
+                width: 100%;
+                padding-right: 45px;
+            }
+
+            #clearSearchBtn {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                font-size: 20px;
+                cursor: pointer;
+                padding: 0;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: all 0.3s;
+            }
+
+            #clearSearchBtn:hover {
+                background: var(--shadow);
+                color: var(--text-main);
+            }
+
+            #clearSearchBtn:active {
+                transform: translateY(-50%) scale(0.95);
+            }
+        </style>
+    </head>
+    <body>
+        <div
+            id="divisionOverlay"
+            style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: var(--bg-body);
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            "
+        >
+            <h2 style="margin-bottom: 30px">Pilih Divisi Matahari</h2>
+            <div
+                style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                    max-width: 400px;
+                    width: 90%;
+                "
+            >
+                <button
+                    class="btn-float"
+                    style="justify-content: center; padding: 30px"
+                    onclick="selectDivision(1)"
+                >
+                    DIVISI 1
+                </button>
+                <button
+                    class="btn-float"
+                    style="justify-content: center; padding: 30px"
+                    onclick="selectDivision(2)"
+                >
+                    DIVISI 2
+                </button>
+                <button
+                    class="btn-float"
+                    style="justify-content: center; padding: 30px"
+                    onclick="selectDivision(3)"
+                >
+                    DIVISI 3
+                </button>
+                <button
+                    class="btn-float"
+                    style="justify-content: center; padding: 30px"
+                    onclick="selectDivision(4)"
+                >
+                    DIVISI 4
+                </button>
+            </div>
         </div>
-        <ul id="fileListContainer" class="file-list" style="max-height: 300px; overflow-y: auto;"></ul>
-    </div>
-</div>
 
-<div class="container">
-    <div class="header-app">
-        <h2 id="titleApp">Katalog Promo Matahari</h2>
-        <div id="loadingBar" class="loading-progress"></div>
-        <div id="status">Memuat data...</div>
-    </div>
-
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." disabled>
-        <button id="clearSearchBtn" type="button" style="display: none;">✕</button>
-    </div>
-    <div id="barcodeTypeInfo">
-        <span style="display: inline-block; background: #2196F3; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-right: 8px;">BARCODE</span>
-        <span id="barcodeTypeTag"></span>
-    </div>
-    
-    <div class="camera-section">
-        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA <span style="font-weight: normal; color: #666; font-size: 11px;">(QR, EAN-13, EAN-8, Code 128, Code 39)</span></label>
-        <div class="camera-preview-container">
-            <video id="cameraVideo" playsinline autoplay muted></video>
+        <div class="controls-bottom">
+            <button id="themeToggle" class="btn-float">🌙 Mode Gelap</button>
+            <button
+                onclick="
+                    document.getElementById('divisionOverlay').style.display =
+                        'flex'
+                "
+                class="btn-float"
+            >
+                🏢 Ganti Divisi
+            </button>
+            <button id="dbToggle" class="btn-float">📁 Database</button>
         </div>
-        <canvas id="cameraCanvas"></canvas>
-        <div class="camera-controls">
-            <button id="cameraToggleBtn" class="camera-toggle">🎥 Aktifkan Kamera</button>
-        </div>
-        <div id="cameraStatus" class="camera-status"></div>
-    </div>
-    
-    <div id="results"></div>
-</div>
 
-<script>
-    let allData = [];
-    let EXCEL_FILES = [];
-    let selectedDiv = null;
-    const DB_NAME = "MatahariPromoCache";
-    const STORE_NAME = "divisiData";
-
-    // --- 1. INDEXED DB ---
-    function openDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 1);
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
-            };
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject("Error DB");
-        });
-    }
-
-    async function getCachedData(divId) {
-        const db = await openDB();
-        return new Promise((resolve) => {
-            const tx = db.transaction(STORE_NAME, "readonly");
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.get(`div_${divId}`);
-            req.onsuccess = () => resolve(req.result);
-        });
-    }
-
-    async function setCachedData(divId, payload) {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
-    }
-
-    // --- 2. LOGIKA SINKRONISASI VERSI ---
-    async function selectDivision(num) {
-        selectedDiv = num;
-        allData = [];
-        EXCEL_FILES = [];
-        resultsContainer.innerHTML = '';
-        searchInput.value = '';
-        document.getElementById('divisionOverlay').style.display = 'none';
-
-        const emojis = { 1: "Ladies 💃", 2: "Shoes 👟", 3: "Man 👔", 4: "Children 👶" };
-        document.getElementById('titleApp').innerText = `Katalog Divisi ${num} ${emojis[num] || ''}`;
-        
-        statusText.innerText = "Mengecek versi data...";
-        
-        try {
-            // Ambil info dari server
-            const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
-            const response = await fetch(path);
-            const serverData = await response.json(); 
-            
-            const serverVersion = serverData.version; // String versi di JSON
-            const serverFiles = serverData.files.map(f => `database/${selectedDiv}/${f}`);
-
-            // Cek data di cache HP
-            const cached = await getCachedData(num);
-
-            // KRITERIAL: Jangan download ulang jika versi sama
-            if (cached && cached.version === serverVersion) {
-                allData = cached.data;
-                EXCEL_FILES = cached.files;
-                statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari memori HP.`;
-                enableSearch();
-            } else {
-                statusText.innerText = "Update versi ditemukan! Mendownload...";
-                await initData(serverFiles, serverVersion);
-            }
-        } catch (e) {
-            const cached = await getCachedData(num);
-            if (cached) {
-                allData = cached.data;
-                EXCEL_FILES = cached.files;
-                statusText.innerText = "⚠️ Offline: Menggunakan cache terakhir.";
-                enableSearch();
-            } else {
-                statusText.innerText = "❌ Gagal sinkronisasi & Cache kosong.";
-            }
-        }
-    }
-
-    async function initData(targetFiles, versionTag) {
-        let loaded = 0;
-        const freshData = [];
-        EXCEL_FILES = targetFiles;
-
-        for (const file of targetFiles) {
-            try {
-                const resp = await fetch(`${file}?t=${Date.now()}`);
-                const buf = await resp.arrayBuffer();
-                const wb = XLSX.read(buf, { type: 'array' });
-                wb.SheetNames.forEach(sn => {
-                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                    freshData.push(...data);
-                });
-                loaded++;
-                loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
-                statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
-            } catch (e) { console.error(e); }
-        }
-        
-        allData = freshData;
-        // Simpan Data, Daftar File, dan Versi ke Cache
-        await setCachedData(selectedDiv, { 
-            data: allData, 
-            files: EXCEL_FILES,
-            version: versionTag 
-        });
-        statusText.innerText = `✅ Versi ${versionTag} berhasil dipasang.`;
-        enableSearch();
-    }
-
-    function enableSearch() {
-        searchInput.disabled = false;
-        searchInput.focus();
-    }
-
-    // --- 3. FORMATTER & RENDER ---
-    function formatDiscount(val) {
-        if (val === undefined || val === null || val === "") return "-";
-        const num = parseFloat(val);
-        // SHARP jika diskon 0 atau 1 (100%)
-        if (num === 0 || num === 1) return "SHARP"; 
-        if (!isNaN(num) && num > 0 && num < 1) return (num * 100).toFixed(0) + "%";
-        if (!isNaN(num) && num >= 1) return num + "%";
-        return val;
-    }
-
-    function parseToDate(val) {
-        if (!val) return null;
-        let d = (typeof val === 'number') ? new Date((val - 25569) * 86400 * 1000) : new Date(val);
-        return isNaN(d.getTime()) ? null : d;
-    }
-
-    function formatDisplayDate(dateObj) {
-        if (!dateObj) return "-";
-        const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-        return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-    }
-
-    const rp = (v) => {
-        if (v === undefined || v === null || v === "") return '-';
-        let valStr = String(v).trim();
-        if (/[a-zA-Z]/.test(valStr)) return valStr;
-        let num = parseFloat(valStr.replace(/[,]/g, ''));
-        if (!isNaN(num)) return 'Rp' + Math.round(num).toLocaleString('id-ID');
-        return valStr;
-    };
-
-    const searchInput = document.getElementById('searchInput');
-    const resultsContainer = document.getElementById('results');
-    const statusText = document.getElementById('status');
-    const loadingBar = document.getElementById('loadingBar');
-    const clearSearchBtn = document.getElementById('clearSearchBtn');
-    
-    // Clear search button functionality
-    clearSearchBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        resultsContainer.innerHTML = '';
-        document.getElementById('barcodeTypeInfo').style.display = 'none';
-        clearSearchBtn.style.display = 'none';
-        searchInput.focus();
-    });
-    
-    searchInput.addEventListener('input', () => {
-        // Toggle clear button visibility
-        if (searchInput.value.length > 0) {
-            clearSearchBtn.style.display = 'flex';
-        } else {
-            clearSearchBtn.style.display = 'none';
-        }
-    });
-
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        resultsContainer.innerHTML = '';
-        if (query.length < 3) return;
-
-        // GMT+7 Jakarta Time
-        const now = new Date();
-        const jakartaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
-        const checkTime = new Date(jakartaTime.getTime() - 60000); 
-        const year = checkTime.getFullYear();
-        const month = String(checkTime.getMonth() + 1).padStart(2, '0');
-        const day = String(checkTime.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
-
-        const filtered = allData.filter(item => {
-            const s = String(item.SKU || '').toLowerCase();
-            const a = String(item.ARTICLE || '').toLowerCase();
-            const d = String(item.DESCRIPTION || '').toLowerCase();
-            return s.includes(query) || a.includes(query) || d.includes(query);
-        }).sort((a, b) => {
-            // Urutkan berdasarkan FROM DATE terbaru (terbesar) paling atas
-            const dateA = parseToDate(a['FROM DATE'] || a['FROM_DATE']);
-            const dateB = parseToDate(b['FROM DATE'] || b['FROM_DATE']);
-            const timeA = dateA ? dateA.getTime() : 0;
-            const timeB = dateB ? dateB.getTime() : 0;
-            return timeB - timeA; // Descending: terbaru dulu
-        }).slice(0, 60);
-
-        // Tentukan SKU mana yang FROM DATE terbesar per SKU
-        const skuLatestDate = {};
-        filtered.forEach(item => {
-            const sku = String(item.SKU || '').trim();
-            if (sku) {
-                const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
-                const fromDateNum = fromDate ? fromDate.getTime() : 0;
-                if (!skuLatestDate[sku] || fromDateNum > skuLatestDate[sku]) {
-                    skuLatestDate[sku] = fromDateNum;
-                }
-            }
-        });
-
-        filtered.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            const fromDate = parseToDate(item['FROM DATE'] || item['FROM_DATE']);
-            const toDate = parseToDate(item['TO DATE'] || item['TO_DATE']);
-            const discountLabel = formatDiscount(item.DISKON);
-            const promoPriceRaw = String(item['HARGA PROMO'] || item[' HARGA PROMO '] || '');
-            const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
-            const isSharp = discountLabel === "SHARP"; 
-            
-            // Cek apakah ini FROM DATE terbesar untuk SKU ini
-            const sku = String(item.SKU || '').trim();
-            const fromDateNum = fromDate ? fromDate.getTime() : 0;
-            const isLatestForSKU = !sku || (skuLatestDate[sku] === fromDateNum);
-            
-            let statusHtml = '';
-            // Pastikan todayStr sudah didefinisikan di luar loop dengan format 'YYYY-MM-DD'
-            // Contoh: const todayStr = new Date().toISOString().split('T')[0];
-
-            if (fromDate && toDate) {
-                const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
-                const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth()+1).padStart(2,'0')}-${String(toDate.getDate()).padStart(2,'0')}`;
-                
-                let label = "";
-                let css = "";
-
-                if (todayStr > tStr) {
-                    label = "BERAKHIR";
-                    css = "status-non";
-                } else if (todayStr >= fStr && todayStr <= tStr) {
-                    label = "Aktif";
-                    css = "status-aktif";
-                } else {
-                    label = "Non-Aktif";
-                    css = "status-non";
-                }
-
-                // Hanya gunakan isLatestForSKU jika kamu ingin menandai 
-                // promo lama yang menumpuk sebagai berakhir secara manual.
-                // Jika ingin murni berdasarkan tanggal, biarkan logika di atas.
-                
-                statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
-            }
-
-            let normalStyle = "";
-            let prefix = "";
-            if (isSharp) normalStyle = "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
-            else if (hasSpecialChars) { normalStyle = "text-decoration: none;"; prefix = "@"; }
-
-            const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ''));
-
-            card.innerHTML = `
-                <div class="sku-row">
-                    <div class="sku-text">SKU: ${item.SKU || '-'}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ''}</div>
-                    <div class="badge-acara">${item.ACARA || 'PROMO'}</div>
+        <div id="dbModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 style="margin: 0">Database Terpasang</h3>
+                    <span
+                        id="closeModal"
+                        style="cursor: pointer; font-size: 24px"
+                        >&times;</span
+                    >
                 </div>
-                <div class="article-name">${item.ARTICLE || 'Tanpa Nama Artikel'}</div>
-                <div class="description">${item.DESCRIPTION || ''}</div>
+                <ul
+                    id="fileListContainer"
+                    class="file-list"
+                    style="max-height: 300px; overflow-y: auto"
+                ></ul>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="header-app">
+                <h2 id="titleApp">Katalog Promo Matahari</h2>
+                <div id="loadingBar" class="loading-progress"></div>
+                <div id="status">Memuat data...</div>
+            </div>
+
+            <div class="search-container">
+                <input
+                    type="text"
+                    id="searchInput"
+                    class="search-box"
+                    placeholder="Cari SKU atau Artikel..."
+                    disabled
+                />
+                <button id="clearSearchBtn" type="button" style="display: none">
+                    ✕
+                </button>
+            </div>
+            <div id="barcodeTypeInfo">
+                <span
+                    style="
+                        display: inline-block;
+                        background: #2196f3;
+                        color: white;
+                        padding: 2px 8px;
+                        border-radius: 12px;
+                        font-size: 10px;
+                        margin-right: 8px;
+                    "
+                    >BARCODE</span
+                >
+                <span id="barcodeTypeTag"></span>
+            </div>
+
+            <div class="camera-section">
+                <label
+                    style="
+                        display: block;
+                        font-size: 13px;
+                        font-weight: bold;
+                        color: var(--text-muted);
+                        margin-bottom: 10px;
+                    "
+                    >📷 SCAN KAMERA
+                    <span
+                        style="
+                            font-weight: normal;
+                            color: #666;
+                            font-size: 11px;
+                        "
+                        >(QR, EAN-13, EAN-8, Code 128, Code 39)</span
+                    ></label
+                >
+                <div class="camera-preview-container">
+                    <video id="cameraVideo" playsinline autoplay muted></video>
+                </div>
+                <canvas id="cameraCanvas"></canvas>
+                <div class="camera-source-select" id="cameraSourcePanel">
+                    <label for="cameraSourceSelect">🔄 Ganti Kamera:</label>
+                    <select id="cameraSourceSelect"></select>
+                </div>
+                <div class="camera-controls">
+                    <button id="cameraToggleBtn" class="camera-toggle">
+                        🎥 Aktifkan Kamera
+                    </button>
+                </div>
+                <div id="cameraStatus" class="camera-status"></div>
+            </div>
+
+            <div id="results"></div>
+        </div>
+
+        <script>
+            let allData = [];
+            let EXCEL_FILES = [];
+            let selectedDiv = null;
+            const DB_NAME = "MatahariPromoCache";
+            const STORE_NAME = "divisiData";
+
+            // --- 1. INDEXED DB ---
+            function openDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME))
+                            db.createObjectStore(STORE_NAME);
+                    };
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject("Error DB");
+                });
+            }
+
+            async function getCachedData(divId) {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction(STORE_NAME, "readonly");
+                    const store = tx.objectStore(STORE_NAME);
+                    const req = store.get(`div_${divId}`);
+                    req.onsuccess = () => resolve(req.result);
+                });
+            }
+
+            async function setCachedData(divId, payload) {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).put(payload, `div_${divId}`);
+            }
+
+            // --- 2. LOGIKA SINKRONISASI VERSI ---
+            async function selectDivision(num) {
+                selectedDiv = num;
+                allData = [];
+                EXCEL_FILES = [];
+                resultsContainer.innerHTML = "";
+                searchInput.value = "";
+                document.getElementById("divisionOverlay").style.display =
+                    "none";
+
+                const emojis = {
+                    1: "Ladies 💃",
+                    2: "Shoes 👟",
+                    3: "Man 👔",
+                    4: "Children 👶",
+                };
+                document.getElementById("titleApp").innerText =
+                    `Katalog Divisi ${num} ${emojis[num] || ""}`;
+
+                statusText.innerText = "Mengecek versi data...";
+
+                try {
+                    // Ambil info dari server
+                    const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
+                    const response = await fetch(path);
+                    const serverData = await response.json();
+
+                    const serverVersion = serverData.version; // String versi di JSON
+                    const serverFiles = serverData.files.map(
+                        (f) => `database/${selectedDiv}/${f}`,
+                    );
+
+                    // Cek data di cache HP
+                    const cached = await getCachedData(num);
+
+                    // KRITERIAL: Jangan download ulang jika versi sama
+                    if (cached && cached.version === serverVersion) {
+                        allData = cached.data;
+                        EXCEL_FILES = cached.files;
+                        statusText.innerText = `⚡ Versi ${serverVersion} cocok. Memuat dari memori HP.`;
+                        enableSearch();
+                    } else {
+                        statusText.innerText =
+                            "Update versi ditemukan! Mendownload...";
+                        await initData(serverFiles, serverVersion);
+                    }
+                } catch (e) {
+                    const cached = await getCachedData(num);
+                    if (cached) {
+                        allData = cached.data;
+                        EXCEL_FILES = cached.files;
+                        statusText.innerText =
+                            "⚠️ Offline: Menggunakan cache terakhir.";
+                        enableSearch();
+                    } else {
+                        statusText.innerText =
+                            "❌ Gagal sinkronisasi & Cache kosong.";
+                    }
+                }
+            }
+
+            async function initData(targetFiles, versionTag) {
+                let loaded = 0;
+                const freshData = [];
+                EXCEL_FILES = targetFiles;
+
+                for (const file of targetFiles) {
+                    try {
+                        const resp = await fetch(`${file}?t=${Date.now()}`);
+                        const buf = await resp.arrayBuffer();
+                        const wb = XLSX.read(buf, { type: "array" });
+                        wb.SheetNames.forEach((sn) => {
+                            const data = XLSX.utils.sheet_to_json(
+                                wb.Sheets[sn],
+                            );
+                            freshData.push(...data);
+                        });
+                        loaded++;
+                        loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
+                        statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                allData = freshData;
+                // Simpan Data, Daftar File, dan Versi ke Cache
+                await setCachedData(selectedDiv, {
+                    data: allData,
+                    files: EXCEL_FILES,
+                    version: versionTag,
+                });
+                statusText.innerText = `✅ Versi ${versionTag} berhasil dipasang.`;
+                enableSearch();
+            }
+
+            function enableSearch() {
+                searchInput.disabled = false;
+                searchInput.focus();
+            }
+
+            // --- 3. FORMATTER & RENDER ---
+            function formatDiscount(val) {
+                if (val === undefined || val === null || val === "") return "-";
+                const num = parseFloat(val);
+                // SHARP jika diskon 0 atau 1 (100%)
+                if (num === 0 || num === 1) return "SHARP";
+                if (!isNaN(num) && num > 0 && num < 1)
+                    return (num * 100).toFixed(0) + "%";
+                if (!isNaN(num) && num >= 1) return num + "%";
+                return val;
+            }
+
+            function parseToDate(val) {
+                if (!val) return null;
+                let d =
+                    typeof val === "number"
+                        ? new Date((val - 25569) * 86400 * 1000)
+                        : new Date(val);
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            function formatDisplayDate(dateObj) {
+                if (!dateObj) return "-";
+                const months = [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "Mei",
+                    "Jun",
+                    "Jul",
+                    "Agu",
+                    "Sep",
+                    "Okt",
+                    "Nov",
+                    "Des",
+                ];
+                return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+            }
+
+            const rp = (v) => {
+                if (v === undefined || v === null || v === "") return "-";
+                let valStr = String(v).trim();
+                if (/[a-zA-Z]/.test(valStr)) return valStr;
+                let num = parseFloat(valStr.replace(/[,]/g, ""));
+                if (!isNaN(num))
+                    return "Rp" + Math.round(num).toLocaleString("id-ID");
+                return valStr;
+            };
+
+            const searchInput = document.getElementById("searchInput");
+            const resultsContainer = document.getElementById("results");
+            const statusText = document.getElementById("status");
+            const loadingBar = document.getElementById("loadingBar");
+            const clearSearchBtn = document.getElementById("clearSearchBtn");
+
+            // Clear search button functionality
+            clearSearchBtn.addEventListener("click", () => {
+                searchInput.value = "";
+                resultsContainer.innerHTML = "";
+                document.getElementById("barcodeTypeInfo").style.display =
+                    "none";
+                clearSearchBtn.style.display = "none";
+                searchInput.focus();
+            });
+
+            searchInput.addEventListener("input", () => {
+                // Toggle clear button visibility
+                if (searchInput.value.length > 0) {
+                    clearSearchBtn.style.display = "flex";
+                } else {
+                    clearSearchBtn.style.display = "none";
+                }
+            });
+
+            searchInput.addEventListener("input", (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                resultsContainer.innerHTML = "";
+                if (query.length < 3) return;
+
+                // GMT+7 Jakarta Time
+                const now = new Date();
+                const jakartaTime = new Date(
+                    now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
+                );
+                const checkTime = new Date(jakartaTime.getTime() - 60000);
+                const year = checkTime.getFullYear();
+                const month = String(checkTime.getMonth() + 1).padStart(2, "0");
+                const day = String(checkTime.getDate()).padStart(2, "0");
+                const todayStr = `${year}-${month}-${day}`;
+
+                const filtered = allData
+                    .filter((item) => {
+                        const s = String(item.SKU || "").toLowerCase();
+                        const a = String(item.ARTICLE || "").toLowerCase();
+                        const d = String(item.DESCRIPTION || "").toLowerCase();
+                        return (
+                            s.includes(query) ||
+                            a.includes(query) ||
+                            d.includes(query)
+                        );
+                    })
+                    .sort((a, b) => {
+                        // Urutkan berdasarkan FROM DATE terbaru (terbesar) paling atas
+                        const dateA = parseToDate(
+                            a["FROM DATE"] || a["FROM_DATE"],
+                        );
+                        const dateB = parseToDate(
+                            b["FROM DATE"] || b["FROM_DATE"],
+                        );
+                        const timeA = dateA ? dateA.getTime() : 0;
+                        const timeB = dateB ? dateB.getTime() : 0;
+                        return timeB - timeA; // Descending: terbaru dulu
+                    })
+                    .slice(0, 60);
+
+                // Tentukan SKU mana yang FROM DATE terbesar per SKU
+                const skuLatestDate = {};
+                filtered.forEach((item) => {
+                    const sku = String(item.SKU || "").trim();
+                    if (sku) {
+                        const fromDate = parseToDate(
+                            item["FROM DATE"] || item["FROM_DATE"],
+                        );
+                        const fromDateNum = fromDate ? fromDate.getTime() : 0;
+                        if (
+                            !skuLatestDate[sku] ||
+                            fromDateNum > skuLatestDate[sku]
+                        ) {
+                            skuLatestDate[sku] = fromDateNum;
+                        }
+                    }
+                });
+
+                filtered.forEach((item) => {
+                    const card = document.createElement("div");
+                    card.className = "card";
+                    const fromDate = parseToDate(
+                        item["FROM DATE"] || item["FROM_DATE"],
+                    );
+                    const toDate = parseToDate(
+                        item["TO DATE"] || item["TO_DATE"],
+                    );
+                    const discountLabel = formatDiscount(item.DISKON);
+                    const promoPriceRaw = String(
+                        item["HARGA PROMO"] || item[" HARGA PROMO "] || "",
+                    );
+                    const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
+                    const isSharp = discountLabel === "SHARP";
+
+                    // Cek apakah ini FROM DATE terbesar untuk SKU ini
+                    const sku = String(item.SKU || "").trim();
+                    const fromDateNum = fromDate ? fromDate.getTime() : 0;
+                    const isLatestForSKU =
+                        !sku || skuLatestDate[sku] === fromDateNum;
+
+                    let statusHtml = "";
+                    // Pastikan todayStr sudah didefinisikan di luar loop dengan format 'YYYY-MM-DD'
+                    // Contoh: const todayStr = new Date().toISOString().split('T')[0];
+
+                    if (fromDate && toDate) {
+                        const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
+                        const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, "0")}-${String(toDate.getDate()).padStart(2, "0")}`;
+
+                        let label = "";
+                        let css = "";
+
+                        if (todayStr > tStr) {
+                            label = "BERAKHIR";
+                            css = "status-non";
+                        } else if (todayStr >= fStr && todayStr <= tStr) {
+                            label = "Aktif";
+                            css = "status-aktif";
+                        } else {
+                            label = "Non-Aktif";
+                            css = "status-non";
+                        }
+
+                        // Hanya gunakan isLatestForSKU jika kamu ingin menandai
+                        // promo lama yang menumpuk sebagai berakhir secara manual.
+                        // Jika ingin murni berdasarkan tanggal, biarkan logika di atas.
+
+                        statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
+                    }
+
+                    let normalStyle = "";
+                    let prefix = "";
+                    if (isSharp)
+                        normalStyle =
+                            "text-decoration: none; font-size: 28px; font-weight: 800; color: var(--text-main);";
+                    else if (hasSpecialChars) {
+                        normalStyle = "text-decoration: none;";
+                        prefix = "@";
+                    }
+
+                    const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ""));
+
+                    card.innerHTML = `
+                <div class="sku-row">
+                    <div class="sku-text">SKU: ${item.SKU || "-"}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ""}</div>
+                    <div class="badge-acara">${item.ACARA || "PROMO"}</div>
+                </div>
+                <div class="article-name">${item.ARTICLE || "Tanpa Nama Artikel"}</div>
+                <div class="description">${item.DESCRIPTION || ""}</div>
                 <div class="period-row">
                     <div class="period-box">📅 ${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}</div>
                     ${statusHtml}
@@ -542,9 +939,9 @@
                 <div class="price-container">
                     <div>
                         <div class="price-normal" style="${normalStyle}">
-                            ${prefix}${rp(item['HARGA NORMAL'] || item[' HARGA NORMAL '])}
+                            ${prefix}${rp(item["HARGA NORMAL"] || item[" HARGA NORMAL "])}
                         </div>
-                        ${isSharp ? '' : `<div class="price-promo" style="${isText ? 'font-size: 16px;' : ''}">${rp(promoPriceRaw)}</div>`}
+                        ${isSharp ? "" : `<div class="price-promo" style="${isText ? "font-size: 16px;" : ""}">${rp(promoPriceRaw)}</div>`}
                     </div>
                     <div style="text-align:right">
                         <div style="font-size:10px; color:var(--text-muted);">DISKON</div>
@@ -552,219 +949,307 @@
                     </div>
                 </div>
             `;
-            resultsContainer.appendChild(card);
-        });
-    });
+                    resultsContainer.appendChild(card);
+                });
+            });
 
-    // --- 4. TEMA & MODAL ---
-    function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        document.getElementById('themeToggle').innerHTML = savedTheme === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
-    }
-
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const target = isDark ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', target);
-        localStorage.setItem('theme', target);
-        document.getElementById('themeToggle').innerHTML = target === 'dark' ? '☀️ Mode Terang' : '🌙 Mode Gelap';
-    });
-
-    dbToggle.addEventListener('click', () => {
-        fileListContainer.innerHTML = EXCEL_FILES.length ? EXCEL_FILES.map(f => `<li class="file-item">${f.split('/').pop()}</li>`).join('') : '<li class="file-item">Kosong</li>';
-        dbModal.style.display = "block";
-    });
-
-    closeModal.onclick = () => dbModal.style.display = "none";
-    window.onclick = (e) => { if(e.target == dbModal) dbModal.style.display = "none"; }
-    
-    // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
-    let detectedBarcodeType = '';
-    
-    function getBarcodeTypeNameZXing(format) {
-        const barcodeFormats = {
-            '0': '📦 QR Code',
-            '1': '📦 EAN-13 (Ritel)',
-            '2': '📦 EAN-8 (Mini)',
-            '3': '📦 UPC-A',
-            '4': '📦 UPC-E',
-            '5': '📋 Codabar',
-            '6': '📋 Code 39',
-            '7': '📋 Code 93',
-            '8': '📋 Code 128 (Data)',
-            '9': '🔢 ITF (2D5)',
-            '10': '🔢 RSS-14',
-            '11': '🔢 RSS Expanded',
-            '12': '📄 PDF-417',
-            '13': '🔷 Aztec',
-            '14': '🔷 Data Matrix',
-            '15': '🔷 MaxiCode',
-            '16': '🔷 MicroQR'
-        };
-        
-        return barcodeFormats[String(format)] || '📦 Linear Barcode';
-    }
-    
-    function processBarcodeSearch(barcode, barcodeType = 'UNKNOWN') {
-        if (!selectedDiv) {
-            showCameraStatus('❌ Pilih divisi terlebih dahulu', 'error');
-            return;
-        }
-        
-        detectedBarcodeType = barcodeType;
-        
-        // Isi textbox searchInput dengan barcode
-        searchInput.value = barcode;
-        
-        // Tampilkan info tipe barcode
-        const barcodeTypeInfo = document.getElementById('barcodeTypeInfo');
-        const barcodeTypeTag = document.getElementById('barcodeTypeTag');
-        barcodeTypeTag.innerHTML = `<strong>${barcodeType}</strong> | <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${barcode}</code>`;
-        barcodeTypeInfo.style.display = 'block';
-        
-        // Trigger input event untuk menjalankan search
-        const event = new Event('input', { bubbles: true });
-        searchInput.dispatchEvent(event);
-        
-        showCameraStatus(`✅ ${barcodeType} terdeteksi`, 'success');
-        
-        if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100]);
-        }
-    }
-    
-    // --- 5. CAMERA BARCODE SCANNING ---
-    const cameraToggleBtn = document.getElementById('cameraToggleBtn');
-    const cameraVideo = document.getElementById('cameraVideo');
-    const cameraCanvas = document.getElementById('cameraCanvas');
-    const cameraStatus = document.getElementById('cameraStatus');
-    let cameraStream = null;
-    let cameraActive = false;
-    let detectionRunning = false;
-    
-    // ZXing BrowserMultiFormatReader untuk deteksi barcode
-    let barcodeReader = null;
-    let currentDecodeListener = null;
-
-    function showCameraStatus(message, type = 'info') {
-        cameraStatus.textContent = message;
-        cameraStatus.style.display = 'block';
-        cameraStatus.style.background = type === 'success' ? '#c8e6c9' : type === 'error' ? '#ffcdd2' : '#bbdefb';
-        cameraStatus.style.color = type === 'success' ? '#2e7d32' : type === 'error' ? '#c62828' : '#1565c0';
-        
-        if (type !== 'info') {
-            setTimeout(() => {
-                cameraStatus.style.display = 'none';
-            }, 4000);
-        }
-    }
-
-    async function startCamera() {
-        try {
-            // Tunggu ZXing library terload
-            if (typeof ZXing === 'undefined') {
-                showCameraStatus('⏳ Tunggu, library sedang dimuat...', 'info');
-                setTimeout(startCamera, 500);
-                return;
+            // --- 4. TEMA & MODAL ---
+            function initTheme() {
+                const savedTheme = localStorage.getItem("theme") || "light";
+                document.documentElement.setAttribute("data-theme", savedTheme);
+                document.getElementById("themeToggle").innerHTML =
+                    savedTheme === "dark" ? "☀️ Mode Terang" : "🌙 Mode Gelap";
             }
-            
-            showCameraStatus('⏳ Membuka kamera...', 'info');
-            
-            // Initialize BrowserMultiFormatReader jika belum
-            if (!barcodeReader) {
+
+            document
+                .getElementById("themeToggle")
+                .addEventListener("click", () => {
+                    const isDark =
+                        document.documentElement.getAttribute("data-theme") ===
+                        "dark";
+                    const target = isDark ? "light" : "dark";
+                    document.documentElement.setAttribute("data-theme", target);
+                    localStorage.setItem("theme", target);
+                    document.getElementById("themeToggle").innerHTML =
+                        target === "dark" ? "☀️ Mode Terang" : "🌙 Mode Gelap";
+                });
+
+            dbToggle.addEventListener("click", () => {
+                fileListContainer.innerHTML = EXCEL_FILES.length
+                    ? EXCEL_FILES.map(
+                          (f) =>
+                              `<li class="file-item">${f.split("/").pop()}</li>`,
+                      ).join("")
+                    : '<li class="file-item">Kosong</li>';
+                dbModal.style.display = "block";
+            });
+
+            closeModal.onclick = () => (dbModal.style.display = "none");
+            window.onclick = (e) => {
+                if (e.target == dbModal) dbModal.style.display = "none";
+            };
+
+            // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
+            let detectedBarcodeType = "";
+
+            function getBarcodeTypeNameZXing(format) {
+                const barcodeFormats = {
+                    0: "📦 QR Code",
+                    1: "📦 EAN-13 (Ritel)",
+                    2: "📦 EAN-8 (Mini)",
+                    3: "📦 UPC-A",
+                    4: "📦 UPC-E",
+                    5: "📋 Codabar",
+                    6: "📋 Code 39",
+                    7: "📋 Code 93",
+                    8: "📋 Code 128 (Data)",
+                    9: "🔢 ITF (2D5)",
+                    10: "🔢 RSS-14",
+                    11: "🔢 RSS Expanded",
+                    12: "📄 PDF-417",
+                    13: "🔷 Aztec",
+                    14: "🔷 Data Matrix",
+                    15: "🔷 MaxiCode",
+                    16: "🔷 MicroQR",
+                };
+
+                return barcodeFormats[String(format)] || "📦 Linear Barcode";
+            }
+
+            function processBarcodeSearch(barcode, barcodeType = "UNKNOWN") {
+                if (!selectedDiv) {
+                    showCameraStatus(
+                        "❌ Pilih divisi terlebih dahulu",
+                        "error",
+                    );
+                    return;
+                }
+
+                detectedBarcodeType = barcodeType;
+
+                // Isi textbox searchInput dengan barcode
+                searchInput.value = barcode;
+
+                // Tampilkan info tipe barcode
+                const barcodeTypeInfo =
+                    document.getElementById("barcodeTypeInfo");
+                const barcodeTypeTag =
+                    document.getElementById("barcodeTypeTag");
+                barcodeTypeTag.innerHTML = `<strong>${barcodeType}</strong> | <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${barcode}</code>`;
+                barcodeTypeInfo.style.display = "block";
+
+                // Trigger input event untuk menjalankan search
+                const event = new Event("input", { bubbles: true });
+                searchInput.dispatchEvent(event);
+
+                showCameraStatus(`✅ ${barcodeType} terdeteksi`, "success");
+
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+            }
+
+            // --- 5. CAMERA BARCODE SCANNING ---
+            const cameraToggleBtn = document.getElementById("cameraToggleBtn");
+            const cameraVideo = document.getElementById("cameraVideo");
+            const cameraCanvas = document.getElementById("cameraCanvas");
+            const cameraStatus = document.getElementById("cameraStatus");
+            const cameraSourcePanel =
+                document.getElementById("cameraSourcePanel");
+            const cameraSourceSelect =
+                document.getElementById("cameraSourceSelect");
+            let cameraActive = false;
+
+            // ZXing BrowserMultiFormatReader untuk deteksi barcode
+            let barcodeReader = null;
+            let selectedCameraDeviceId = null;
+
+            function showCameraStatus(message, type = "info") {
+                cameraStatus.textContent = message;
+                cameraStatus.style.display = "block";
+                cameraStatus.style.background =
+                    type === "success"
+                        ? "#c8e6c9"
+                        : type === "error"
+                          ? "#ffcdd2"
+                          : "#bbdefb";
+                cameraStatus.style.color =
+                    type === "success"
+                        ? "#2e7d32"
+                        : type === "error"
+                          ? "#c62828"
+                          : "#1565c0";
+
+                if (type !== "info") {
+                    setTimeout(() => {
+                        cameraStatus.style.display = "none";
+                    }, 4000);
+                }
+            }
+
+            // Inisialisasi ZXing dan daftar kamera saat halaman siap
+            function initZXing() {
+                if (typeof ZXing === "undefined") {
+                    setTimeout(initZXing, 300);
+                    return;
+                }
+
                 barcodeReader = new ZXing.BrowserMultiFormatReader();
-            }
-            
-            // Tampilkan container preview
-            document.querySelector('.camera-preview-container').style.display = 'block';
-            cameraActive = true;
-            cameraToggleBtn.classList.add('active');
-            cameraToggleBtn.innerHTML = '❌ Matikan Kamera';
-            
-            showCameraStatus('✅ Kamera siap. Arahkan ke barcode/QR code', 'success');
-            startBarcodeDetection();
-            
-        } catch (e) {
-            showCameraStatus(`❌ Error: ${e.message}`, 'error');
-            console.error(e);
-            cameraActive = false;
-        }
-    }
+                console.log("ZXing BrowserMultiFormatReader initialized");
 
-    function stopCamera() {
-        cameraActive = false;
-        detectionRunning = false;
-        
-        // Berhenti decode dari video device
-        if (barcodeReader) {
-            barcodeReader.reset();
-        }
-        
-        document.querySelector('.camera-preview-container').style.display = 'none';
-        cameraToggleBtn.classList.remove('active');
-        cameraToggleBtn.innerHTML = '🎥 Aktifkan Kamera';
-        showCameraStatus('Kamera dimatikan', 'info');
-    }
+                barcodeReader
+                    .listVideoInputDevices()
+                    .then((videoInputDevices) => {
+                        if (videoInputDevices.length === 0) return;
 
-    function startBarcodeDetection() {
-        if (detectionRunning) return;
-        detectionRunning = true;
+                        // Set default ke kamera belakang jika ada
+                        const backCamera = videoInputDevices.find((d) =>
+                            /back|rear|environment/i.test(d.label),
+                        );
+                        selectedCameraDeviceId = backCamera
+                            ? backCamera.deviceId
+                            : videoInputDevices[0].deviceId;
 
-        try {
-            // Decode dari video element dengan continuous callback
-            currentDecodeListener = (result, err) => {
-                if (result) {
-                    const barcode = result.text.trim();
-                    const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
-                    
-                    if (barcode.length >= 2) {
-                        // Stop detection setelah menemukan barcode
-                        if (barcodeReader) {
-                            barcodeReader.reset();
+                        // Isi dropdown jika ada lebih dari 1 kamera
+                        if (videoInputDevices.length > 1) {
+                            cameraSourceSelect.innerHTML = "";
+                            videoInputDevices.forEach((device) => {
+                                const opt = document.createElement("option");
+                                opt.value = device.deviceId;
+                                opt.text =
+                                    device.label ||
+                                    `Kamera ${cameraSourceSelect.options.length + 1}`;
+                                if (device.deviceId === selectedCameraDeviceId)
+                                    opt.selected = true;
+                                cameraSourceSelect.appendChild(opt);
+                            });
+                            cameraSourcePanel.style.display = "block";
+
+                            cameraSourceSelect.onchange = () => {
+                                selectedCameraDeviceId =
+                                    cameraSourceSelect.value;
+                                // Restart kamera dengan device baru jika sedang aktif
+                                if (cameraActive) {
+                                    stopCamera();
+                                    startCamera();
+                                }
+                            };
                         }
-                        detectionRunning = false;
-                        cameraActive = false;
-                        
-                        // Hide preview
-                        document.querySelector('.camera-preview-container').style.display = 'none';
-                        cameraToggleBtn.classList.remove('active');
-                        cameraToggleBtn.innerHTML = '🎥 Aktifkan Kamera';
-                        
-                        // Process detected barcode
-                        processBarcodeSearch(barcode, barcodeType);
+                    })
+                    .catch((err) => {
+                        console.warn(
+                            "Tidak dapat mendapatkan daftar kamera:",
+                            err,
+                        );
+                    });
+            }
+
+            async function startCamera() {
+                try {
+                    if (typeof ZXing === "undefined" || !barcodeReader) {
+                        showCameraStatus(
+                            "⏳ Tunggu, library sedang dimuat...",
+                            "info",
+                        );
+                        setTimeout(startCamera, 500);
                         return;
                     }
-                }
-                
-                if (err && !(err instanceof ZXing.NotFoundException)) {
-                    console.error('Barcode detection error:', err);
-                }
-            };
-            
-            // Decode dari video element (akan menggunakan first available device jika tidak ada preferences)
-            barcodeReader.decodeFromVideoElement(cameraVideo, currentDecodeListener);
-            console.log('Started barcode detection from video element');
-            
-        } catch (e) {
-            console.error('Error starting barcode detection:', e);
-            detectionRunning = false;
-        }
-    }
 
-    cameraToggleBtn.addEventListener('click', () => {
-        if (cameraActive) {
-            stopCamera();
-        } else {
-            if (!selectedDiv) {
-                showCameraStatus('❌ Pilih divisi terlebih dahulu', 'error');
-                return;
+                    showCameraStatus("⏳ Membuka kamera...", "info");
+
+                    // Tampilkan container preview
+                    document.querySelector(
+                        ".camera-preview-container",
+                    ).style.display = "block";
+                    cameraActive = true;
+                    cameraToggleBtn.classList.add("active");
+                    cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
+
+                    // Decode langsung dari video device menggunakan deviceId terpilih
+                    barcodeReader.decodeFromVideoDevice(
+                        selectedCameraDeviceId,
+                        cameraVideo,
+                        (result, err) => {
+                            if (result) {
+                                const barcode = result.text.trim();
+                                const barcodeType = getBarcodeTypeNameZXing(
+                                    result.barcodeFormat,
+                                );
+
+                                if (barcode.length >= 2) {
+                                    // Reset & tutup kamera setelah barcode ditemukan
+                                    barcodeReader.reset();
+                                    cameraActive = false;
+
+                                    document.querySelector(
+                                        ".camera-preview-container",
+                                    ).style.display = "none";
+                                    cameraToggleBtn.classList.remove("active");
+                                    cameraToggleBtn.innerHTML =
+                                        "🎥 Aktifkan Kamera";
+
+                                    processBarcodeSearch(barcode, barcodeType);
+                                    return;
+                                }
+                            }
+
+                            if (
+                                err &&
+                                !(err instanceof ZXing.NotFoundException)
+                            ) {
+                                console.error("Barcode detection error:", err);
+                            }
+                        },
+                    );
+
+                    showCameraStatus(
+                        "✅ Kamera siap. Arahkan ke barcode/QR code",
+                        "success",
+                    );
+                    console.log(
+                        `Started decode from camera: ${selectedCameraDeviceId}`,
+                    );
+                } catch (e) {
+                    showCameraStatus(`❌ Error: ${e.message}`, "error");
+                    console.error(e);
+                    cameraActive = false;
+                }
             }
-            startCamera();
-        }
-    });
 
-    initTheme();
-</script>
-</body>
+            function stopCamera() {
+                cameraActive = false;
+
+                if (barcodeReader) {
+                    barcodeReader.reset();
+                }
+
+                document.querySelector(
+                    ".camera-preview-container",
+                ).style.display = "none";
+                cameraToggleBtn.classList.remove("active");
+                cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
+                showCameraStatus("Kamera dimatikan", "info");
+            }
+
+            cameraToggleBtn.addEventListener("click", () => {
+                if (cameraActive) {
+                    stopCamera();
+                } else {
+                    if (!selectedDiv) {
+                        showCameraStatus(
+                            "❌ Pilih divisi terlebih dahulu",
+                            "error",
+                        );
+                        return;
+                    }
+                    startCamera();
+                }
+            });
+
+            // Jalankan inisialisasi ZXing saat halaman load
+            window.addEventListener("load", initZXing);
+
+            initTheme();
+        </script>
+    </body>
 </html>
