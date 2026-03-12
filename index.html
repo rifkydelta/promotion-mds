@@ -943,10 +943,12 @@
                         const s = String(item.SKU || "").toLowerCase();
                         const a = String(item.ARTICLE || "").toLowerCase();
                         const d = String(item.DESCRIPTION || "").toLowerCase();
+                        const ac = String(item.ACARA || "").toLowerCase();
                         return (
                             s.includes(query) ||
                             a.includes(query) ||
-                            d.includes(query)
+                            d.includes(query) ||
+                            ac.includes(query)
                         );
                     })
                     .sort((a, b) => {
