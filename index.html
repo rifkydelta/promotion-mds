@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Promo Searcher - Matahari</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/dist/index.min.js"></script>
+    <script async src="https://unpkg.com/@zxing/library@0.20.0"></script>
     <style>
         :root {
             --bg-body: #f4f7f6;
@@ -722,6 +722,15 @@
 
     function startBarcodeDetection() {
         if (detectionRunning) return;
+        
+        // Tunggu ZXing library terload
+        if (typeof ZXing === 'undefined') {
+            console.error('ZXing library belum terload');
+            showCameraStatus('⏳ Tunggu, library sedang dimuat...', 'info');
+            setTimeout(startBarcodeDetection, 500);
+            return;
+        }
+        
         detectionRunning = true;
 
         // Initialize ZXing objects once for reuse
