@@ -245,7 +245,7 @@
     </div>
     
     <div class="camera-section">
-        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA <span style="font-weight: normal; color: #666; font-size: 11px;">(QR, EAN-13, EAN-8, Code 128, Code 39)</span></label>
+        <label style="display: block; font-size: 13px; font-weight: bold; color: var(--text-muted); margin-bottom: 10px;">📷 SCAN KAMERA</label>
         <div class="camera-preview-container">
             <video id="cameraVideo" playsinline autoplay muted></video>
         </div>
@@ -676,15 +676,35 @@
             
             showCameraStatus('⏳ Membuka kamera...', 'info');
             
-            // Initialize ZXing code reader jika belum ada
-            if (!zxingCodeReader) {
-                zxingCodeReader = new ZXing.BrowserMultiFormatReader();
-            }
+            // Dapatkan akses kamera
+            const constraints = {
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraVideo.srcObject = cameraStream;
+            
+            // Tunggu video siap
+            await new Promise(resolve => {
+                cameraVideo.onloadedmetadata = () => {
+                    cameraVideo.play();
+                    resolve();
+                };
+            });
             
             document.querySelector('.camera-preview-container').style.display = 'block';
             cameraActive = true;
             cameraToggleBtn.classList.add('active');
             cameraToggleBtn.innerHTML = '❌ Matikan Kamera';
+            
+            // Initialize ZXing code reader jika belum ada
+            if (!zxingCodeReader) {
+                zxingCodeReader = new ZXing.BrowserMultiFormatReader();
+            }
             
             showCameraStatus('✅ Kamera siap. Arahkan ke barcode/QR code', 'success');
             startBarcodeDetection();
