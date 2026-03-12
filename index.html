@@ -322,29 +322,6 @@
                 display: none;
             }
 
-            .camera-source-select {
-                display: none;
-                margin-top: 10px;
-            }
-
-            .camera-source-select label {
-                font-size: 12px;
-                color: var(--text-muted);
-                display: block;
-                margin-bottom: 4px;
-            }
-
-            .camera-source-select select {
-                width: 100%;
-                padding: 8px 10px;
-                border-radius: 8px;
-                border: 1px solid var(--input-border);
-                background: var(--input-bg);
-                color: var(--text-main);
-                font-size: 13px;
-                outline: none;
-            }
-
             #barcodeTypeInfo {
                 display: none;
                 margin-top: 8px;
@@ -561,24 +538,13 @@
                         color: var(--text-muted);
                         margin-bottom: 10px;
                     "
-                    >📷 SCAN KAMERA
-                    <span
-                        style="
-                            font-weight: normal;
-                            color: #666;
-                            font-size: 11px;
-                        "
-                        >(QR, EAN-13, EAN-8, Code 128, Code 39)</span
-                    ></label
+                    >📷 SCAN KAMERA</label
                 >
                 <div class="camera-preview-container">
                     <video id="cameraVideo" playsinline autoplay muted></video>
                 </div>
                 <canvas id="cameraCanvas"></canvas>
-                <div class="camera-source-select" id="cameraSourcePanel">
-                    <label for="cameraSourceSelect">🔄 Ganti Kamera:</label>
-                    <select id="cameraSourceSelect"></select>
-                </div>
+
                 <div class="camera-controls">
                     <button id="cameraToggleBtn" class="camera-toggle">
                         🎥 Aktifkan Kamera
@@ -1054,15 +1020,10 @@
             const cameraVideo = document.getElementById("cameraVideo");
             const cameraCanvas = document.getElementById("cameraCanvas");
             const cameraStatus = document.getElementById("cameraStatus");
-            const cameraSourcePanel =
-                document.getElementById("cameraSourcePanel");
-            const cameraSourceSelect =
-                document.getElementById("cameraSourceSelect");
             let cameraActive = false;
 
             // ZXing BrowserMultiFormatReader untuk deteksi barcode
             let barcodeReader = null;
-            let selectedCameraDeviceId = null;
 
             function showCameraStatus(message, type = "info") {
                 cameraStatus.textContent = message;
@@ -1087,7 +1048,7 @@
                 }
             }
 
-            // Inisialisasi ZXing dan daftar kamera saat halaman siap
+            // Inisialisasi ZXing saat halaman siap
             function initZXing() {
                 if (typeof ZXing === "undefined") {
                     setTimeout(initZXing, 300);
@@ -1096,52 +1057,6 @@
 
                 barcodeReader = new ZXing.BrowserMultiFormatReader();
                 console.log("ZXing BrowserMultiFormatReader initialized");
-
-                barcodeReader
-                    .listVideoInputDevices()
-                    .then((videoInputDevices) => {
-                        if (videoInputDevices.length === 0) return;
-
-                        // Set default ke kamera belakang jika ada
-                        const backCamera = videoInputDevices.find((d) =>
-                            /back|rear|environment/i.test(d.label),
-                        );
-                        selectedCameraDeviceId = backCamera
-                            ? backCamera.deviceId
-                            : videoInputDevices[0].deviceId;
-
-                        // Isi dropdown jika ada lebih dari 1 kamera
-                        if (videoInputDevices.length > 1) {
-                            cameraSourceSelect.innerHTML = "";
-                            videoInputDevices.forEach((device) => {
-                                const opt = document.createElement("option");
-                                opt.value = device.deviceId;
-                                opt.text =
-                                    device.label ||
-                                    `Kamera ${cameraSourceSelect.options.length + 1}`;
-                                if (device.deviceId === selectedCameraDeviceId)
-                                    opt.selected = true;
-                                cameraSourceSelect.appendChild(opt);
-                            });
-                            cameraSourcePanel.style.display = "block";
-
-                            cameraSourceSelect.onchange = () => {
-                                selectedCameraDeviceId =
-                                    cameraSourceSelect.value;
-                                // Restart kamera dengan device baru jika sedang aktif
-                                if (cameraActive) {
-                                    stopCamera();
-                                    startCamera();
-                                }
-                            };
-                        }
-                    })
-                    .catch((err) => {
-                        console.warn(
-                            "Tidak dapat mendapatkan daftar kamera:",
-                            err,
-                        );
-                    });
             }
 
             async function startCamera() {
@@ -1166,8 +1081,9 @@
                     cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
 
                     // Decode langsung dari video device menggunakan deviceId terpilih
-                    barcodeReader.decodeFromVideoDevice(
-                        selectedCameraDeviceId,
+                    // Selalu gunakan kamera belakang via environment constraint
+                    barcodeReader.decodeFromConstraints(
+                        { video: { facingMode: { exact: "environment" } } },
                         cameraVideo,
                         (result, err) => {
                             if (result) {
@@ -1207,7 +1123,7 @@
                         "success",
                     );
                     console.log(
-                        `Started decode from camera: ${selectedCameraDeviceId}`,
+                        "Started decode from back camera (environment)",
                     );
                 } catch (e) {
                     showCameraStatus(`❌ Error: ${e.message}`, "error");
