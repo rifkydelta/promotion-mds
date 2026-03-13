@@ -467,12 +467,12 @@
 
             .search-container .search-box {
                 width: 100%;
-                padding-right: 45px;
+                padding-right: 40px; /* Beri ruang agar teks tidak tertutup tombol X */
             }
 
             #clearSearchBtn {
                 position: absolute;
-                right: 12px;
+                right: 10px;
                 top: 50%;
                 transform: translateY(-50%);
                 background: none;
@@ -631,16 +631,14 @@
                 <div id="status">Memuat data...</div>
             </div>
 
-            <div class="search-container">
-                <input
-                    type="text"
-                    id="searchInput"
-                    class="search-box"
-                    placeholder="Cari SKU atau Artikel..."
-                    disabled
-                />
-                <button id="clearSearchBtn" type="button" style="display: none">
-                    ✕
+            <div class="search-container" style="display: flex; gap: 8px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..." style="width: 100%; padding-right: 40px;">
+                    <button id="clearSearchBtn" type="button" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">✕</button>
+                </div>
+                
+                <button id="voiceSearchBtn" class="btn-float" style="padding: 10px; min-width: 45px; margin: 0;">
+                    🎤
                 </button>
             </div>
             <div id="barcodeTypeInfo">
@@ -1589,6 +1587,67 @@
                     startCamera();
                 }
             });
+
+            // voice search (ekstra) - menggunakan Web Speech API, hanya untuk pencarian teks biasa, tidak untuk barcode
+            const voiceSearchBtn = document.getElementById('voiceSearchBtn');
+            const recognition = window.SpeechRecognition || window.webkitSpeechRecognition ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
+
+            if (!recognition) {
+                voiceSearchBtn.style.display = 'none'; // Sembunyikan jika browser tidak support
+                console.log("Speech Recognition tidak didukung di browser ini.");
+            } else {
+                recognition.lang = 'id-ID'; // Set bahasa Indonesia
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                voiceSearchBtn.onclick = () => {
+                    if (!selectedDiv && !isUploadMode) {
+                        showCameraStatus("❌ Pilih divisi dulu", "error");
+                        return;
+                    }
+                    
+                    recognition.start();
+                    voiceSearchBtn.innerHTML = "🛑"; // Berubah icon saat merekam
+                    voiceSearchBtn.style.borderColor = "#e74c3c";
+                    showCameraStatus("🎙️ Silahkan bicara (Sebut SKU/Brand)...", "info");
+                };
+
+                recognition.onresult = (event) => {
+                    // 1. Ambil teks asli dari suara
+                    const rawTranscript = event.results[0][0].transcript;
+                    
+                    // 2. Hapus semua yang BUKAN angka (Hapus huruf, spasi, simbol, dsb)
+                    const cleanNumber = rawTranscript.replace(/[^0-9]/g, '');
+                    
+                    // 3. Masukkan ke input
+                    searchInput.value = cleanNumber;
+                    
+                    // Trigger pencarian otomatis hanya jika ada angka yang masuk
+                    if (cleanNumber.length > 0) {
+                        const e = new Event('input', { bubbles: true });
+                        searchInput.dispatchEvent(e);
+                        showCameraStatus(`✅ Angka terdeteksi: ${cleanNumber}`, "success");
+                    } else {
+                        showCameraStatus("⚠️ Tidak ada angka yang terdeteksi.", "error");
+                    }
+                };
+
+                recognition.onspeechend = () => {
+                    recognition.stop();
+                    resetVoiceBtn();
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Voice Error: ", event.error);
+                    resetVoiceBtn();
+                    showCameraStatus("❌ Suara tidak jelas, coba lagi.", "error");
+                };
+
+                function resetVoiceBtn() {
+                    voiceSearchBtn.innerHTML = "🎤";
+                    voiceSearchBtn.style.borderColor = "var(--input-border)";
+                }
+            }
 
             window.addEventListener("load", initZXing);
 
