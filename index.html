@@ -324,15 +324,24 @@
             .camera-controls{
                 display: flex;
                 flex-direction: row;
-                flex-wrap: nowrap;      /* tetap horizontal */
-                justify-content: center;/* rata tengah */
+                justify-content: center;
                 align-items: center;
-                gap: 8px;
-                overflow-x: auto;       /* kalau sempit bisa scroll samping */
+                gap: 6px;
             }
 
             .camera-controls button{
-                flex: 0 0 auto;
+                flex: 1;                 /* tombol bagi rata */
+                min-width: 0;
+                padding: 8px 6px;
+                font-size: 14px;
+            }
+
+            /* khusus layar HP */
+            @media (max-width: 600px){
+                .camera-controls button{
+                    font-size: 11px;     /* kecilkan font */
+                    padding: 6px 4px;
+                }
             }
 
             .camera-toggle {
@@ -677,16 +686,19 @@
 
                 <div class="camera-controls">
                     <button id="cameraToggleBtn" class="camera-toggle">
-                        🎥 Aktifkan Kamera
+                        🎥 Scan
                     </button>
-                    <button id="uploadImageBtn" class="upload-toggle" style="background:#7d0096; border-color:#00796b;">
+
+                    <button id="cameraUploadBtn" class="upload-toggle" style="background:#7d0096;">
                         📸 Kamera
                     </button>
-                    <input type="file" id="fileInputBarcode" accept="image/*"capture="environment" style="display:none;">
-                    <button id="uploadImageBtn" class="upload-toggle" style="background:#00965c; border-color:#00796b;">
-                        🖼️ Galery
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+
+                    <button id="galleryUploadBtn" class="upload-toggle" style="background:#00965c;">
+                        🖼️ Galeri
                     </button>
-                    <input type="file" id="fileInputBarcode" accept="image/*" style="display: none;">
+                    <input type="file" id="galleryInput" accept="image/*" style="display:none;">
+
                     <button id="torchBtn" class="torch-toggle">
                         🔦 Senter
                     </button>
@@ -1280,18 +1292,41 @@
             }
 
             // --- 5. CAMERA & IMAGE UPLOAD SCANNING ---
+
             const cameraToggleBtn = document.getElementById("cameraToggleBtn");
-            const uploadImageBtn = document.getElementById("uploadImageBtn");
-            const fileInputBarcode = document.getElementById("fileInputBarcode");
+
+            const cameraUploadBtn = document.getElementById("cameraUploadBtn");
+            const galleryUploadBtn = document.getElementById("galleryUploadBtn");
+
+            const cameraInput = document.getElementById("cameraInput");
+            const galleryInput = document.getElementById("galleryInput");
+
             const cameraVideo = document.getElementById("cameraVideo");
             const cameraStatus = document.getElementById("cameraStatus");
-            let cameraActive = false;
 
+            let cameraActive = false;
             let barcodeReader = null;
             let torchOn = false;
             let activeVideoTrack = null;
 
             const torchBtn = document.getElementById("torchBtn");
+
+            // Fungsi validasi sebelum buka file picker
+            function validateBeforeUpload() {
+                if (!selectedDiv && !isUploadMode) {
+                    showCameraStatus("❌ Pilih divisi terlebih dahulu", "error");
+                    return false;
+                }
+                return true;
+            }
+
+            cameraUploadBtn.onclick = () => {
+                if(validateBeforeUpload()) cameraInput.click();
+            };
+
+            galleryUploadBtn.onclick = () => {
+                if(validateBeforeUpload()) galleryInput.click();
+            };
 
             async function toggleTorch() {
                 if (!activeVideoTrack) return;
@@ -1369,24 +1404,16 @@
 
             let isProcessing = false;
 
-            // --- Fitur Scan dari Foto (Upload) ---
-            uploadImageBtn.addEventListener("click", () => {
-                if (!selectedDiv && !isUploadMode) {
-                    showCameraStatus("❌ Pilih divisi terlebih dahulu", "error");
-                    return;
-                }
-                fileInputBarcode.click();
-            });
-
-            fileInputBarcode.addEventListener("change", (e) => {
-                const file = e.target.files[0];
+            // --- Fungsi Universal untuk Scan dari Kamera Input & Galeri Input ---
+            function handleImageFile(event) {
+                const file = event.target.files[0];
                 if (!file) return;
 
                 showCameraStatus("⏳ Memproses gambar...", "info");
 
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    const imgUrl = event.target.result;
+                reader.onload = (e) => {
+                    const imgUrl = e.target.result;
                     const imgElement = new Image();
                     imgElement.src = imgUrl;
 
@@ -1400,19 +1427,24 @@
                                 const barcode = result.text.trim();
                                 const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
                                 processBarcodeSearch(barcode, barcodeType);
-                                fileInputBarcode.value = ""; // reset
+                                event.target.value = ""; // Reset input agar file yang sama bisa diupload ulang
                             })
                             .catch((err) => {
                                 console.error(err);
                                 showCameraStatus("❌ Barcode tidak terbaca di gambar tersebut", "error");
-                                fileInputBarcode.value = ""; // reset
+                                event.target.value = ""; // Reset input
                             });
                     };
                 };
                 reader.readAsDataURL(file);
-            });
+            }
 
-            // --- Fitur Scan dari Video Kamera Lagsung ---
+            // Pasang event listener ke kedua input tersembunyi
+            cameraInput.addEventListener("change", handleImageFile);
+            galleryInput.addEventListener("change", handleImageFile);
+
+
+            // --- Fitur Scan dari Video Kamera Langsung (Tombol Scan) ---
             async function startCamera() {
                 try {
                     if (typeof ZXing === "undefined" || !barcodeReader) {
@@ -1451,7 +1483,8 @@
                     cameraActive = true;
                     isProcessing = false;
                     cameraToggleBtn.classList.add("active");
-                    cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
+                    // Ubah text jadi 'Stop' saat kamera aktif
+                    cameraToggleBtn.innerHTML = "❌ Stop";
 
                     setTimeout(() => {
                         if (cameraVideo.srcObject) {
@@ -1489,7 +1522,8 @@
 
                 document.querySelector(".camera-preview-container").style.display = "none";
                 cameraToggleBtn.classList.remove("active");
-                cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
+                // Kembalikan text jadi 'Scan' saat kamera mati
+                cameraToggleBtn.innerHTML = "🎥 Scan";
                 showCameraStatus("Kamera dimatikan", "info");
             }
 
