@@ -321,10 +321,18 @@
                 display: none;
             }
 
-            .camera-controls {
+            .camera-controls{
                 display: flex;
-                gap: 10px;
-                flex-wrap: wrap;
+                flex-direction: row;
+                flex-wrap: nowrap;      /* tetap horizontal */
+                justify-content: center;/* rata tengah */
+                align-items: center;
+                gap: 8px;
+                overflow-x: auto;       /* kalau sempit bisa scroll samping */
+            }
+
+            .camera-controls button{
+                flex: 0 0 auto;
             }
 
             .camera-toggle {
@@ -672,15 +680,13 @@
                         🎥 Aktifkan Kamera
                     </button>
                     <button id="uploadImageBtn" class="upload-toggle" style="background:#7d0096; border-color:#00796b;">
-                    📸 Kamera / Galeri
+                        📸 Kamera
                     </button>
-                    <input 
-                    type="file" 
-                    id="fileInputBarcode" 
-                    accept="image/*"
-                    capture="environment"
-                    style="display:none;"
-                    >
+                    <input type="file" id="fileInputBarcode" accept="image/*"capture="environment" style="display:none;">
+                    <button id="uploadImageBtn" class="upload-toggle" style="background:#00965c; border-color:#00796b;">
+                        🖼️ Galery
+                    </button>
+                    <input type="file" id="fileInputBarcode" accept="image/*" style="display: none;">
                     <button id="torchBtn" class="torch-toggle">
                         🔦 Senter
                     </button>
