@@ -276,6 +276,40 @@
                 display: none;
             }
 
+            #processingOverlay {
+                display: none;
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.55);
+                z-index: 10;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                color: #fff;
+                font-weight: bold;
+                font-size: 15px;
+                text-align: center;
+                padding: 12px;
+            }
+
+            #processingOverlay.show {
+                display: flex;
+            }
+
+            .processing-spinner {
+                width: 36px;
+                height: 36px;
+                border: 4px solid rgba(255,255,255,0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
             #cameraVideo {
                 width: 100%;
                 height: 100%;
@@ -609,6 +643,11 @@
                 >
                 <div class="camera-preview-container">
                     <video id="cameraVideo" playsinline autoplay muted></video>
+                    <div id="processingOverlay">
+                        <div class="processing-spinner"></div>
+                        <div>Barcode terdeteksi!</div>
+                        <div style="font-size:12px; font-weight:normal; opacity:0.85;">Tahan stabil, sedang memproses...</div>
+                    </div>
                 </div>
                 <canvas id="cameraCanvas"></canvas>
 
@@ -1333,31 +1372,10 @@
                     return;
                 }
 
-                // Prioritaskan EAN-13 & UPC, lalu semua format lainnya
-                const hints = new Map();
-                const formats = [
-                    ZXing.BarcodeFormat.EAN_13,
-                    ZXing.BarcodeFormat.UPC_A,
-                    ZXing.BarcodeFormat.UPC_E,
-                    ZXing.BarcodeFormat.EAN_8,
-                    ZXing.BarcodeFormat.CODE_128,
-                    ZXing.BarcodeFormat.CODE_39,
-                    ZXing.BarcodeFormat.CODE_93,
-                    ZXing.BarcodeFormat.QR_CODE,
-                    ZXing.BarcodeFormat.DATA_MATRIX,
-                    ZXing.BarcodeFormat.PDF_417,
-                    ZXing.BarcodeFormat.AZTEC,
-                    ZXing.BarcodeFormat.ITF,
-                    ZXing.BarcodeFormat.CODABAR,
-                    ZXing.BarcodeFormat.RSS_14,
-                    ZXing.BarcodeFormat.RSS_EXPANDED,
-                    ZXing.BarcodeFormat.MAXICODE,
-                ];
-                hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-                hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-                barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
-                console.log("ZXing BrowserMultiFormatReader initialized (EAN-13 priority)");
+                barcodeReader = new ZXing.BrowserMultiFormatReader();
+                console.log("ZXing BrowserMultiFormatReader initialized");
             }
+
 
             async function startCamera() {
                 try {
@@ -1398,11 +1416,13 @@
                                     if (isProcessing) return;
                                     isProcessing = true;
 
-                                    // Tampilkan notif tahan stabil
-                                    showCameraStatus("📸 Terdeteksi! Tahan stabil...", "info");
+                                    // Tampilkan overlay tahan stabil di atas video
+                                    document.getElementById("processingOverlay").classList.add("show");
 
-                                    // Beri jeda singkat agar user tahu sedang diproses
                                     setTimeout(() => {
+                                        // Sembunyikan overlay
+                                        document.getElementById("processingOverlay").classList.remove("show");
+
                                         // Reset & tutup kamera setelah barcode ditemukan
                                         barcodeReader.reset();
                                         cameraActive = false;
@@ -1417,7 +1437,7 @@
 
                                         stopTorch();
                                         processBarcodeSearch(barcode, barcodeType);
-                                    }, 600);
+                                    }, 800);
                                     return;
                                 }
                             }
