@@ -569,7 +569,6 @@
             </div>
         </div>
 
-        <!-- Panel Mode Unggah -->
         <div id="uploadPanel" style="display:none; margin-bottom: 14px; padding: 10px 12px; background: var(--bg-card); border-radius: 10px; border: 2px solid #3949ab; box-shadow: 0 2px 8px var(--shadow);">
             <div style="display:flex; align-items:center; gap:8px;">
                 <label id="uploadDropZone" style="
@@ -625,11 +624,10 @@
                 <span id="barcodeTypeTag"></span>
             </div>
 
-            <!-- kontainer kamera aktif "style=display: block", kontainer kamera off "style=display: none"-->
             <div
                 class="camera-section"
                 id="cameraSectionWrapper"
-                style="display: block" // default kamera aktif, bisa diubah ke "none" untuk nonaktifkan kamera saat load awal
+                style="display: block"
             >
                 <label
                     style="
@@ -1371,81 +1369,11 @@
                     setTimeout(initZXing, 300);
                     return;
                 }
-
                 barcodeReader = new ZXing.BrowserMultiFormatReader();
                 console.log("ZXing BrowserMultiFormatReader initialized");
             }
 
-            let cameraStream = null;
-            let scanLoopId = null;
             let isProcessing = false;
-
-            // Pastikan barcodeReader didefinisikan sekali di lingkup global/atas
-            const barcodeReader = new ZXing.BrowserMultiFormatReader();
-
-            async function startScanning() {
-                try {
-                    // 1. Dapatkan daftar perangkat kamera (opsional, null akan menggunakan default)
-                    // const videoInputDevices = await barcodeReader.listVideoInputDevices();
-                    // const selectedDeviceId = videoInputDevices[0].deviceId;
-
-                    // 2. Mulai pemindaian langsung dari elemen video
-                    // null: otomatis memilih kamera (biasanya kamera belakang pada HP)
-                    // cameraVideo: elemen <video> di HTML Anda
-                    barcodeReader.decodeFromVideoDevice(null, cameraVideo, (result, err) => {
-                        if (result) {
-                            // Cegah proses ganda jika sedang dalam masa tunggu (800ms)
-                            if (isProcessing || !cameraActive) return;
-
-                            const barcode = result.text.trim();
-                            if (barcode.length < 2) return;
-
-                            // Set status sedang memproses
-                            isProcessing = true;
-
-                            const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
-
-                            // Tampilkan overlay tahan stabil
-                            document.getElementById("processingOverlay").classList.add("show");
-
-                            // Berikan jeda agar user merasa ada proses "fokus"
-                            setTimeout(() => {
-                                // Berhentikan semua proses kamera
-                                stopCamera();
-
-                                document.getElementById("processingOverlay").classList.remove("show");
-
-                                // Kirim hasil ke fungsi pencarian Anda
-                                processBarcodeSearch(barcode, barcodeType);
-                            }, 800);
-                        }
-
-                        if (err && !(err instanceof ZXing.NotFoundException)) {
-                            // Abaikan jika hanya "tidak ditemukan", tampilkan jika ada error sistem
-                            console.error("Scan Error:", err);
-                        }
-                    });
-
-                } catch (err) {
-                    console.error("Gagal inisialisasi kamera:", err);
-                }
-            }
-
-            // Fungsi untuk mematikan kamera dan membersihkan UI
-            function stopCamera() {
-                // Memberhentikan stream dan decoding secara total
-                barcodeReader.reset();
-
-                cameraActive = false;
-                isProcessing = false;
-
-                // Sembunyikan container preview
-                document.querySelector(".camera-preview-container").style.display = "none";
-                cameraToggleBtn.classList.remove("active");
-                cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
-
-                stopTorch();
-            }
 
             async function startCamera() {
                 try {
@@ -1457,41 +1385,56 @@
 
                     showCameraStatus("⏳ Membuka kamera...", "info");
 
-                    // Buka stream kamera belakang langsung via getUserMedia
-                    cameraStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: { ideal: "environment" },
-                            width:  { ideal: 1280 },
-                            height: { ideal: 720 },
+                    // Memulai pemindaian dari video secara langsung dengan ZXing
+                    barcodeReader.decodeFromVideoDevice(null, cameraVideo, (result, err) => {
+                        if (result) {
+                            if (isProcessing || !cameraActive) return;
+
+                            const barcode = result.text.trim();
+                            if (barcode.length < 2) return;
+
+                            isProcessing = true;
+                            const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+
+                            document.getElementById("processingOverlay").classList.add("show");
+
+                            setTimeout(() => {
+                                document.getElementById("processingOverlay").classList.remove("show");
+                                stopCamera();
+                                processBarcodeSearch(barcode, barcodeType);
+                            }, 800);
+                        }
+
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                            console.error("Scan Error:", err);
                         }
                     });
 
-                    cameraVideo.srcObject = cameraStream;
-                    await cameraVideo.play();
-
-                    // Tampilkan container preview
+                    // Update UI Kamera Aktif
                     document.querySelector(".camera-preview-container").style.display = "block";
                     cameraActive = true;
                     isProcessing = false;
                     cameraToggleBtn.classList.add("active");
                     cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
 
-                    // Ambil video track untuk senter
-                    activeVideoTrack = cameraStream.getVideoTracks()[0] || null;
-                    if (activeVideoTrack) {
-                        torchBtn.style.display = "block";
-                        torchBtn.innerHTML = "🔦 Senter";
-                        setTimeout(() => {
-                            const cap = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
-                            if (!cap.torch) torchBtn.style.display = "none";
-                        }, 500);
-                    }
-
-                    // Mulai loop scan setiap 200ms
-                    scanLoopId = setInterval(captureAndDecode, 200);
+                    // Ambil video track untuk Senter (Beri sedikit jeda agar ZXing selesai set srcObject)
+                    setTimeout(() => {
+                        if (cameraVideo.srcObject) {
+                            const tracks = cameraVideo.srcObject.getVideoTracks();
+                            if (tracks.length > 0) {
+                                activeVideoTrack = tracks[0];
+                                torchBtn.style.display = "block";
+                                torchBtn.innerHTML = "🔦 Senter";
+                                
+                                setTimeout(() => {
+                                    const cap = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
+                                    if (!cap.torch) torchBtn.style.display = "none";
+                                }, 500);
+                            }
+                        }
+                    }, 1000);
 
                     showCameraStatus("✅ Kamera siap. Arahkan ke barcode/QR code", "success");
-                    console.log("Started canvas-crop scan loop");
                 } catch (e) {
                     showCameraStatus(`❌ Error: ${e.message}`, "error");
                     console.error(e);
@@ -1503,14 +1446,9 @@
                 cameraActive = false;
                 isProcessing = false;
 
-                if (scanLoopId) {
-                    clearInterval(scanLoopId);
-                    scanLoopId = null;
-                }
-
-                if (cameraStream) {
-                    cameraStream.getTracks().forEach(t => t.stop());
-                    cameraStream = null;
+                // Fungsi reset dari ZXing otomatis memberhentikan stream dan proses dekode
+                if (barcodeReader) {
+                    barcodeReader.reset();
                 }
 
                 stopTorch();
@@ -1525,7 +1463,7 @@
                 if (cameraActive) {
                     stopCamera();
                 } else {
-                    if (!selectedDiv) {
+                    if (!selectedDiv && !isUploadMode) {
                         showCameraStatus(
                             "❌ Pilih divisi terlebih dahulu",
                             "error",
