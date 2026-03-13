@@ -1360,6 +1360,8 @@
 
                     // Decode langsung dari video device menggunakan deviceId terpilih
                     // Selalu gunakan kamera belakang via environment constraint
+                    let isProcessing = false;
+
                     barcodeReader.decodeFromConstraints(
                         { video: { facingMode: { exact: "environment" } } },
                         cameraVideo,
@@ -1371,19 +1373,29 @@
                                 );
 
                                 if (barcode.length >= 2) {
-                                    // Reset & tutup kamera setelah barcode ditemukan
-                                    barcodeReader.reset();
-                                    cameraActive = false;
+                                    if (isProcessing) return;
+                                    isProcessing = true;
 
-                                    document.querySelector(
-                                        ".camera-preview-container",
-                                    ).style.display = "none";
-                                    cameraToggleBtn.classList.remove("active");
-                                    cameraToggleBtn.innerHTML =
-                                        "🎥 Aktifkan Kamera";
+                                    // Tampilkan notif tahan stabil
+                                    showCameraStatus("📸 Terdeteksi! Tahan stabil...", "info");
 
-                                    stopTorch();
-                                    processBarcodeSearch(barcode, barcodeType);
+                                    // Beri jeda singkat agar user tahu sedang diproses
+                                    setTimeout(() => {
+                                        // Reset & tutup kamera setelah barcode ditemukan
+                                        barcodeReader.reset();
+                                        cameraActive = false;
+                                        isProcessing = false;
+
+                                        document.querySelector(
+                                            ".camera-preview-container",
+                                        ).style.display = "none";
+                                        cameraToggleBtn.classList.remove("active");
+                                        cameraToggleBtn.innerHTML =
+                                            "🎥 Aktifkan Kamera";
+
+                                        stopTorch();
+                                        processBarcodeSearch(barcode, barcodeType);
+                                    }, 600);
                                     return;
                                 }
                             }
