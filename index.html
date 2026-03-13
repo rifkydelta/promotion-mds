@@ -1365,15 +1365,13 @@
                 }
             }
 
-            // Inisialisasi ZXing saat halaman siap
+            // Inisialisasi ZXing saat halaman siap (hanya cek library tersedia)
             function initZXing() {
                 if (typeof ZXing === "undefined") {
                     setTimeout(initZXing, 300);
                     return;
                 }
-
-                barcodeReader = new ZXing.BrowserMultiFormatReader();
-                console.log("ZXing BrowserMultiFormatReader initialized");
+                console.log("ZXing library ready");
             }
 
             let cameraStream = null;
@@ -1468,6 +1466,9 @@
 
                     showCameraStatus("⏳ Membuka kamera...", "info");
 
+                    // Buat instance baru setiap kali kamera dinyalakan agar state ZXing selalu bersih
+                    barcodeReader = new ZXing.BrowserMultiFormatReader();
+
                     // Buka stream kamera belakang langsung via getUserMedia
                     cameraStream = await navigator.mediaDevices.getUserMedia({
                         video: {
@@ -1522,7 +1523,11 @@
                 if (cameraStream) {
                     cameraStream.getTracks().forEach(t => t.stop());
                     cameraStream = null;
+                    cameraVideo.srcObject = null;
                 }
+
+                // Buang instance lama agar tidak ada state tersisa
+                barcodeReader = null;
 
                 stopTorch();
 
