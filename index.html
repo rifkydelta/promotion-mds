@@ -1449,37 +1449,42 @@
                 showCameraStatus("⏳ Memproses gambar...", "info");
 
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     const imgUrl = e.target.result;
-                    const imgElement = new Image();
-                    imgElement.src = imgUrl;
+                    
+                    // --- HARD RESET SISTEM ---
+                    if (barcodeReader) {
+                        barcodeReader.reset();
+                        barcodeReader = null;
+                    }
+                    // Inisialisasi ulang library
+                    barcodeReader = new ZXing.BrowserMultiFormatReader();
+                    
+                    // Buat elemen image temporary untuk proses decoding
+                    const tempImg = new Image();
+                    tempImg.src = imgUrl;
 
-                    imgElement.onload = async () => {
-                        // Pastikan reader bersih sebelum digunakan kembali
-                        if (barcodeReader) {
-                            barcodeReader.reset();
-                            barcodeReader = null;
-                        }
-                        barcodeReader = new ZXing.BrowserMultiFormatReader();
-
-                        barcodeReader.decodeFromImageElement(imgElement)
+                    tempImg.onload = () => {
+                        // Menggunakan decodeFromImage sesuai contoh dokumentasi yang kamu berikan
+                        // Metode ini lebih stabil untuk berbagai format 1D/2D termasuk QR Code
+                        barcodeReader.decodeFromImage(tempImg)
                             .then((result) => {
                                 const barcode = result.text.trim();
                                 const barcodeType = getBarcodeTypeNameZXing(result.format);
                                 
-                                // Reset input file agar gambar yang sama bisa dipilih lagi nantinya
+                                // Reset input agar bisa pilih file yang sama berkali-kali
                                 event.target.value = ""; 
                                 
+                                // Masukkan ke fungsi pencarian utama
                                 processBarcodeSearch(barcode, barcodeType);
                             })
                             .catch((err) => {
-                                console.error(err);
-                                showCameraStatus("❌ Barcode tidak terbaca. Pastikan gambar jelas dan terang.", "error");
+                                console.error("Gagal Decode:", err);
+                                showCameraStatus("❌ QR/Barcode tidak ditemukan. Coba foto lebih dekat & jelas.", "error");
                                 event.target.value = "";
                                 
-                                // Reset library jika gagal agar fresh
-                                barcodeReader = null;
-                                initZXing();
+                                // Reset jika gagal agar pemindaian berikutnya fresh
+                                barcodeReader.reset();
                             });
                     };
                 };
