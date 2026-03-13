@@ -1241,26 +1241,45 @@
 
             function getBarcodeTypeNameZXing(format) {
                 const barcodeFormats = {
-                    0: "📦 QR Code",
-                    1: "📦 EAN-13 (Ritel)",
-                    2: "📦 EAN-8 (Mini)",
-                    3: "📦 UPC-A",
-                    4: "📦 UPC-E",
-                    5: "📋 Codabar",
-                    6: "📋 Code 39",
-                    7: "📋 Code 93",
-                    8: "📋 Code 128 (Data)",
-                    9: "🔢 ITF (2D5)",
-                    10: "🔢 RSS-14",
-                    11: "🔢 RSS Expanded",
-                    12: "📄 PDF-417",
-                    13: "🔷 Aztec",
-                    14: "🔷 Data Matrix",
-                    15: "🔷 MaxiCode",
-                    16: "🔷 MicroQR",
+                    // Mapping standar angka ZXing (Enum)
+                    0: "🔷 Aztec",
+                    1: "📋 Codabar",
+                    2: "📋 Code 39",
+                    3: "📋 Code 93",
+                    4: "📋 Code 128 (Data)",
+                    5: "🔷 Data Matrix",
+                    6: "📦 EAN-8 (Mini)",
+                    7: "📦 EAN-13 (Ritel)",
+                    8: "🔢 ITF (2D5)",
+                    9: "🔷 MaxiCode",
+                    10: "📄 PDF-417",
+                    11: "📦 QR Code",
+                    12: "🔢 RSS-14",
+                    13: "🔢 RSS Expanded",
+                    14: "📦 UPC-A",
+                    15: "📦 UPC-E",
+                    
+                    // Mapping string (jaga-jaga jika balikan ZXing berupa teks)
+                    "AZTEC": "🔷 Aztec",
+                    "CODABAR": "📋 Codabar",
+                    "CODE_39": "📋 Code 39",
+                    "CODE_93": "📋 Code 93",
+                    "CODE_128": "📋 Code 128 (Data)",
+                    "DATA_MATRIX": "🔷 Data Matrix",
+                    "EAN_8": "📦 EAN-8 (Mini)",
+                    "EAN_13": "📦 EAN-13 (Ritel)",
+                    "ITF": "🔢 ITF (2D5)",
+                    "MAXICODE": "🔷 MaxiCode",
+                    "PDF_417": "📄 PDF-417",
+                    "QR_CODE": "📦 QR Code",
+                    "RSS_14": "🔢 RSS-14",
+                    "RSS_EXPANDED": "🔢 RSS Expanded",
+                    "UPC_A": "📦 UPC-A",
+                    "UPC_E": "📦 UPC-E"
                 };
 
-                return barcodeFormats[String(format)] || "📦 Linear Barcode";
+                // Jika format tidak ada di daftar, tampilkan nama format aslinya agar ketahuan
+                return barcodeFormats[String(format)] || `📦 Barcode (${format})`;
             }
 
             function processBarcodeSearch(barcode, barcodeType = "UNKNOWN") {
