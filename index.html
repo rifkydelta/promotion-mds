@@ -1444,7 +1444,7 @@
                         barcodeReader.decodeFromImageElement(imgElement)
                             .then((result) => {
                                 const barcode = result.text.trim();
-                                const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                                const barcodeType = getBarcodeTypeNameZXing(result.format);
                                 processBarcodeSearch(barcode, barcodeType);
                                 event.target.value = ""; // Reset input agar file yang sama bisa diupload ulang
                             })
@@ -1482,7 +1482,7 @@
                             if (barcode.length < 2) return;
 
                             isProcessing = true;
-                            const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                            const barcodeType = getBarcodeTypeNameZXing(result.format);
 
                             document.getElementById("processingOverlay").classList.add("show");
 
