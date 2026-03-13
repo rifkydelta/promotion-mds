@@ -1442,50 +1442,58 @@
             let isProcessing = false;
 
             // --- Fungsi Universal untuk Scan dari Kamera Input & Galeri Input ---
-            function handleImageFile(event) {
+            async function handleImageFile(event) {
                 const file = event.target.files[0];
                 if (!file) return;
 
-                showCameraStatus("⏳ Memproses gambar...", "info");
+                showCameraStatus("⏳ HP sedang memproses gambar...", "info");
+
+                // 1. HARD RESET - Pastikan reader lama dihancurkan total
+                if (barcodeReader) {
+                    barcodeReader.reset();
+                    barcodeReader = null;
+                }
+
+                // 2. AKTIFKAN HINTS (Kunci agar HP bisa seakurat PC)
+                const hints = new Map();
+                // TRY_HARDER: Memaksa library melakukan pencarian lebih teliti (wajib untuk HP)
+                hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                // ASSUME_CODE_39_CHECK_DIGIT: Membantu akurasi barcode 1D jika ada
+                // hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                //     ZXing.BarcodeFormat.QR_CODE, 
+                //     ZXing.BarcodeFormat.EAN_13, 
+                //     ZXing.BarcodeFormat.CODE_128
+                // ]);
+
+                // Inisialisasi Reader Baru dengan Hints
+                barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
 
                 const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const imgUrl = e.target.result;
-                    
-                    // --- HARD RESET SISTEM ---
-                    if (barcodeReader) {
-                        barcodeReader.reset();
-                        barcodeReader = null;
-                    }
-                    // Inisialisasi ulang library
-                    barcodeReader = new ZXing.BrowserMultiFormatReader();
-                    
-                    // Buat elemen image temporary untuk proses decoding
-                    const tempImg = new Image();
-                    tempImg.src = imgUrl;
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
 
-                    tempImg.onload = () => {
-                        // Menggunakan decodeFromImage sesuai contoh dokumentasi yang kamu berikan
-                        // Metode ini lebih stabil untuk berbagai format 1D/2D termasuk QR Code
-                        barcodeReader.decodeFromImage(tempImg)
-                            .then((result) => {
-                                const barcode = result.text.trim();
-                                const barcodeType = getBarcodeTypeNameZXing(result.format);
-                                
-                                // Reset input agar bisa pilih file yang sama berkali-kali
-                                event.target.value = ""; 
-                                
-                                // Masukkan ke fungsi pencarian utama
-                                processBarcodeSearch(barcode, barcodeType);
-                            })
-                            .catch((err) => {
-                                console.error("Gagal Decode:", err);
-                                showCameraStatus("❌ QR/Barcode tidak ditemukan. Coba foto lebih dekat & jelas.", "error");
-                                event.target.value = "";
-                                
-                                // Reset jika gagal agar pemindaian berikutnya fresh
-                                barcodeReader.reset();
-                            });
+                    img.onload = async () => {
+                        try {
+                            // Gunakan decodeFromImage sesuai dokumentasi yang Anda temukan
+                            // Metode ini paling stabil untuk file upload statis
+                            const result = await barcodeReader.decodeFromImage(img);
+                            
+                            const barcode = result.text.trim();
+                            const barcodeType = getBarcodeTypeNameZXing(result.format);
+                            
+                            event.target.value = ""; 
+                            processBarcodeSearch(barcode, barcodeType);
+                            
+                        } catch (err) {
+                            console.error("Gagal di HP:", err);
+                            // Jika gagal, berikan instruksi spesifik ke user
+                            showCameraStatus("❌ Gagal. Pastikan foto tidak blur & barcode terlihat jelas.", "error");
+                            event.target.value = "";
+                            
+                            // Reset sistem agar fresh untuk percobaan berikutnya
+                            if (barcodeReader) barcodeReader.reset();
+                        }
                     };
                 };
                 reader.readAsDataURL(file);
