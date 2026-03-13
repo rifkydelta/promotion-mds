@@ -1333,8 +1333,30 @@
                     return;
                 }
 
-                barcodeReader = new ZXing.BrowserMultiFormatReader();
-                console.log("ZXing BrowserMultiFormatReader initialized");
+                // Prioritaskan EAN-13 & UPC, lalu semua format lainnya
+                const hints = new Map();
+                const formats = [
+                    ZXing.BarcodeFormat.EAN_13,
+                    ZXing.BarcodeFormat.UPC_A,
+                    ZXing.BarcodeFormat.UPC_E,
+                    ZXing.BarcodeFormat.EAN_8,
+                    ZXing.BarcodeFormat.CODE_128,
+                    ZXing.BarcodeFormat.CODE_39,
+                    ZXing.BarcodeFormat.CODE_93,
+                    ZXing.BarcodeFormat.QR_CODE,
+                    ZXing.BarcodeFormat.DATA_MATRIX,
+                    ZXing.BarcodeFormat.PDF_417,
+                    ZXing.BarcodeFormat.AZTEC,
+                    ZXing.BarcodeFormat.ITF,
+                    ZXing.BarcodeFormat.CODABAR,
+                    ZXing.BarcodeFormat.RSS_14,
+                    ZXing.BarcodeFormat.RSS_EXPANDED,
+                    ZXing.BarcodeFormat.MAXICODE,
+                ];
+                hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+                hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
+                console.log("ZXing BrowserMultiFormatReader initialized (EAN-13 priority)");
             }
 
             async function startCamera() {
