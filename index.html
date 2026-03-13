@@ -671,10 +671,16 @@
                     <button id="cameraToggleBtn" class="camera-toggle">
                         🎥 Aktifkan Kamera
                     </button>
-                    <button id="uploadImageBtn" class="upload-toggle" style="background: #009688; border-color: #00796b;">
-                        📸 Kamera / Galeri
+                    <button id="uploadImageBtn" class="upload-toggle" style="background:#7d0096; border-color:#00796b;">
+                    📸 Kamera / Galeri
                     </button>
-                    <input type="file" id="fileInputBarcode" accept="image/*" style="display: none;">
+                    <input 
+                    type="file" 
+                    id="fileInputBarcode" 
+                    accept="image/*"
+                    capture="environment"
+                    style="display:none;"
+                    >
                     <button id="torchBtn" class="torch-toggle">
                         🔦 Senter
                     </button>
