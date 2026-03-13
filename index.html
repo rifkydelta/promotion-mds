@@ -1446,27 +1446,7 @@
                 const file = event.target.files[0];
                 if (!file) return;
 
-                showCameraStatus("⏳ HP sedang memproses gambar...", "info");
-
-                // 1. HARD RESET - Pastikan reader lama dihancurkan total
-                if (barcodeReader) {
-                    barcodeReader.reset();
-                    barcodeReader = null;
-                }
-
-                // 2. AKTIFKAN HINTS (Kunci agar HP bisa seakurat PC)
-                const hints = new Map();
-                // TRY_HARDER: Memaksa library melakukan pencarian lebih teliti (wajib untuk HP)
-                hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-                // ASSUME_CODE_39_CHECK_DIGIT: Membantu akurasi barcode 1D jika ada
-                // hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-                //     ZXing.BarcodeFormat.QR_CODE, 
-                //     ZXing.BarcodeFormat.EAN_13, 
-                //     ZXing.BarcodeFormat.CODE_128
-                // ]);
-
-                // Inisialisasi Reader Baru dengan Hints
-                barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
+                showCameraStatus("⏳ Menyamakan performa HP dengan PC...", "info");
 
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1474,10 +1454,38 @@
                     img.src = e.target.result;
 
                     img.onload = async () => {
+                        // 1. BUAT CANVAS UNTUK NORMALISASI (Agar HP tidak berat)
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // Kita set resolusi standar yang disukai ZXing (Max 1280px)
+                        const MAX_WIDTH = 1280;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        // 2. DRAW & SHARPEN (Meningkatkan kontras untuk Barcode/QR)
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // --- HARD RESET ZXing ---
+                        if (barcodeReader) { barcodeReader.reset(); barcodeReader = null; }
+                        
+                        // Gunakan TRY_HARDER agar HP melakukan pencarian sedalam PC
+                        const hints = new Map();
+                        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                        barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
+
                         try {
-                            // Gunakan decodeFromImage sesuai dokumentasi yang Anda temukan
-                            // Metode ini paling stabil untuk file upload statis
-                            const result = await barcodeReader.decodeFromImage(img);
+                            // 3. SCAN DARI CANVAS (Bukan dari Image langsung)
+                            // Canvas lebih "ringan" dibaca oleh browser HP dibanding elemen Image
+                            const result = await barcodeReader.decodeFromCanvas(canvas);
                             
                             const barcode = result.text.trim();
                             const barcodeType = getBarcodeTypeNameZXing(result.format);
@@ -1486,12 +1494,9 @@
                             processBarcodeSearch(barcode, barcodeType);
                             
                         } catch (err) {
-                            console.error("Gagal di HP:", err);
-                            // Jika gagal, berikan instruksi spesifik ke user
-                            showCameraStatus("❌ Gagal. Pastikan foto tidak blur & barcode terlihat jelas.", "error");
+                            console.error("Gagal Scan HP:", err);
+                            showCameraStatus("❌ HP gagal mendeteksi. Coba bersihkan lensa atau tambah cahaya.", "error");
                             event.target.value = "";
-                            
-                            // Reset sistem agar fresh untuk percobaan berikutnya
                             if (barcodeReader) barcodeReader.reset();
                         }
                     };
