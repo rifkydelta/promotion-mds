@@ -1380,82 +1380,71 @@
             let scanLoopId = null;
             let isProcessing = false;
 
-            // Capture frame dari area tengah video (sesuai rasio preview 2/1.5)
-            // lalu decode dari canvas tersebut
-            function captureAndDecode() {
-                if (!cameraActive || isProcessing) return;
-                if (cameraVideo.readyState < 2) return;
+            // Pastikan barcodeReader didefinisikan sekali di lingkup global/atas
+            const barcodeReader = new ZXing.BrowserMultiFormatReader();
 
-                const vw = cameraVideo.videoWidth;
-                const vh = cameraVideo.videoHeight;
-                if (!vw || !vh) return;
+            async function startScanning() {
+                try {
+                    // 1. Dapatkan daftar perangkat kamera (opsional, null akan menggunakan default)
+                    // const videoInputDevices = await barcodeReader.listVideoInputDevices();
+                    // const selectedDeviceId = videoInputDevices[0].deviceId;
 
-                // Hitung crop area tengah sesuai rasio container (2:1.5 = 4:3)
-                const targetRatio = 2 / 1.5;
-                const videoRatio = vw / vh;
+                    // 2. Mulai pemindaian langsung dari elemen video
+                    // null: otomatis memilih kamera (biasanya kamera belakang pada HP)
+                    // cameraVideo: elemen <video> di HTML Anda
+                    barcodeReader.decodeFromVideoDevice(null, cameraVideo, (result, err) => {
+                        if (result) {
+                            // Cegah proses ganda jika sedang dalam masa tunggu (800ms)
+                            if (isProcessing || !cameraActive) return;
 
-                let cropW, cropH, cropX, cropY;
-                if (videoRatio > targetRatio) {
-                    // Video lebih lebar — crop kiri-kanan
-                    cropH = vh;
-                    cropW = Math.round(vh * targetRatio);
-                    cropX = Math.round((vw - cropW) / 2);
-                    cropY = 0;
-                } else {
-                    // Video lebih tinggi — crop atas-bawah
-                    cropW = vw;
-                    cropH = Math.round(vw / targetRatio);
-                    cropX = 0;
-                    cropY = Math.round((vh - cropH) / 2);
-                }
+                            const barcode = result.text.trim();
+                            if (barcode.length < 2) return;
 
-                // Gambar area crop ke canvas dengan ukuran diperbesar
-                const scale = 2;
-                const canvas = cameraCanvas;
-                canvas.width  = cropW * scale;
-                canvas.height = cropH * scale;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(cameraVideo, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+                            // Set status sedang memproses
+                            isProcessing = true;
 
-                // Decode dari canvas
-                barcodeReader.decodeFromCanvas(canvas)
-                    .then((result) => {
-                        if (!cameraActive || isProcessing) return;
-                        const barcode = result.text.trim();
-                        if (barcode.length < 2) return;
+                            const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
 
-                        isProcessing = true;
-                        clearInterval(scanLoopId);
-                        scanLoopId = null;
+                            // Tampilkan overlay tahan stabil
+                            document.getElementById("processingOverlay").classList.add("show");
 
-                        const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                            // Berikan jeda agar user merasa ada proses "fokus"
+                            setTimeout(() => {
+                                // Berhentikan semua proses kamera
+                                stopCamera();
 
-                        // Tampilkan overlay tahan stabil
-                        document.getElementById("processingOverlay").classList.add("show");
+                                document.getElementById("processingOverlay").classList.remove("show");
 
-                        setTimeout(() => {
-                            document.getElementById("processingOverlay").classList.remove("show");
+                                // Kirim hasil ke fungsi pencarian Anda
+                                processBarcodeSearch(barcode, barcodeType);
+                            }, 800);
+                        }
 
-                            cameraActive = false;
-                            isProcessing = false;
-
-                            // Stop stream
-                            if (cameraStream) {
-                                cameraStream.getTracks().forEach(t => t.stop());
-                                cameraStream = null;
-                            }
-
-                            document.querySelector(".camera-preview-container").style.display = "none";
-                            cameraToggleBtn.classList.remove("active");
-                            cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
-
-                            stopTorch();
-                            processBarcodeSearch(barcode, barcodeType);
-                        }, 800);
-                    })
-                    .catch(() => {
-                        // NotFoundException normal — barcode belum terbaca, lanjut
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                            // Abaikan jika hanya "tidak ditemukan", tampilkan jika ada error sistem
+                            console.error("Scan Error:", err);
+                        }
                     });
+
+                } catch (err) {
+                    console.error("Gagal inisialisasi kamera:", err);
+                }
+            }
+
+            // Fungsi untuk mematikan kamera dan membersihkan UI
+            function stopCamera() {
+                // Memberhentikan stream dan decoding secara total
+                barcodeReader.reset();
+
+                cameraActive = false;
+                isProcessing = false;
+
+                // Sembunyikan container preview
+                document.querySelector(".camera-preview-container").style.display = "none";
+                cameraToggleBtn.classList.remove("active");
+                cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
+
+                stopTorch();
             }
 
             async function startCamera() {
