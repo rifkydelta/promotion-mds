@@ -1616,19 +1616,19 @@
                     // 1. Ambil teks asli dari suara
                     const rawTranscript = event.results[0][0].transcript;
                     
-                    // 2. Hapus semua yang BUKAN angka (Hapus huruf, spasi, simbol, dsb)
-                    const cleanNumber = rawTranscript.replace(/[^0-9]/g, '');
+                    // 2. FILTER: Hanya simpan Angka dan Huruf saja (Alphanumeric)
+                    // Karakter seperti " ", ".", "-", atau emoji akan dibuang otomatis
+                    const cleanAlphanumeric = rawTranscript.replace(/[^0-9]/g, '');
                     
                     // 3. Masukkan ke input
-                    searchInput.value = cleanNumber;
+                    searchInput.value = cleanAlphanumeric;
                     
-                    // Trigger pencarian otomatis hanya jika ada angka yang masuk
-                    if (cleanNumber.length > 0) {
+                    if (cleanAlphanumeric.length > 0) {
                         const e = new Event('input', { bubbles: true });
                         searchInput.dispatchEvent(e);
-                        showCameraStatus(`✅ Angka terdeteksi: ${cleanNumber}`, "success");
+                        showCameraStatus(`✅ Terdeteksi: ${cleanAlphanumeric}`, "success");
                     } else {
-                        showCameraStatus("⚠️ Tidak ada angka yang terdeteksi.", "error");
+                        showCameraStatus("⚠️ Gagal mendeteksi angka atau huruf.", "error");
                     }
                 };
 
