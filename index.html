@@ -1376,112 +1376,133 @@
                 console.log("ZXing BrowserMultiFormatReader initialized");
             }
 
+            let cameraStream = null;
+            let scanLoopId = null;
+            let isProcessing = false;
+
+            // Capture frame dari area tengah video (sesuai rasio preview 2/1.5)
+            // lalu decode dari canvas tersebut
+            function captureAndDecode() {
+                if (!cameraActive || isProcessing) return;
+                if (cameraVideo.readyState < 2) return;
+
+                const vw = cameraVideo.videoWidth;
+                const vh = cameraVideo.videoHeight;
+                if (!vw || !vh) return;
+
+                // Hitung crop area tengah sesuai rasio container (2:1.5 = 4:3)
+                const targetRatio = 2 / 1.5;
+                const videoRatio = vw / vh;
+
+                let cropW, cropH, cropX, cropY;
+                if (videoRatio > targetRatio) {
+                    // Video lebih lebar — crop kiri-kanan
+                    cropH = vh;
+                    cropW = Math.round(vh * targetRatio);
+                    cropX = Math.round((vw - cropW) / 2);
+                    cropY = 0;
+                } else {
+                    // Video lebih tinggi — crop atas-bawah
+                    cropW = vw;
+                    cropH = Math.round(vw / targetRatio);
+                    cropX = 0;
+                    cropY = Math.round((vh - cropH) / 2);
+                }
+
+                // Gambar area crop ke canvas dengan ukuran diperbesar
+                const scale = 2;
+                const canvas = cameraCanvas;
+                canvas.width  = cropW * scale;
+                canvas.height = cropH * scale;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(cameraVideo, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+                // Decode dari canvas
+                barcodeReader.decodeFromCanvas(canvas)
+                    .then((result) => {
+                        if (!cameraActive || isProcessing) return;
+                        const barcode = result.text.trim();
+                        if (barcode.length < 2) return;
+
+                        isProcessing = true;
+                        clearInterval(scanLoopId);
+                        scanLoopId = null;
+
+                        const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+
+                        // Tampilkan overlay tahan stabil
+                        document.getElementById("processingOverlay").classList.add("show");
+
+                        setTimeout(() => {
+                            document.getElementById("processingOverlay").classList.remove("show");
+
+                            cameraActive = false;
+                            isProcessing = false;
+
+                            // Stop stream
+                            if (cameraStream) {
+                                cameraStream.getTracks().forEach(t => t.stop());
+                                cameraStream = null;
+                            }
+
+                            document.querySelector(".camera-preview-container").style.display = "none";
+                            cameraToggleBtn.classList.remove("active");
+                            cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
+
+                            stopTorch();
+                            processBarcodeSearch(barcode, barcodeType);
+                        }, 800);
+                    })
+                    .catch(() => {
+                        // NotFoundException normal — barcode belum terbaca, lanjut
+                    });
+            }
 
             async function startCamera() {
                 try {
                     if (typeof ZXing === "undefined" || !barcodeReader) {
-                        showCameraStatus(
-                            "⏳ Tunggu, library sedang dimuat...",
-                            "info",
-                        );
+                        showCameraStatus("⏳ Tunggu, library sedang dimuat...", "info");
                         setTimeout(startCamera, 500);
                         return;
                     }
 
                     showCameraStatus("⏳ Membuka kamera...", "info");
 
+                    // Buka stream kamera belakang langsung via getUserMedia
+                    cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: { ideal: "environment" },
+                            width:  { ideal: 1280 },
+                            height: { ideal: 720 },
+                        }
+                    });
+
+                    cameraVideo.srcObject = cameraStream;
+                    await cameraVideo.play();
+
                     // Tampilkan container preview
-                    document.querySelector(
-                        ".camera-preview-container",
-                    ).style.display = "block";
+                    document.querySelector(".camera-preview-container").style.display = "block";
                     cameraActive = true;
+                    isProcessing = false;
                     cameraToggleBtn.classList.add("active");
                     cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
 
-                    // Decode langsung dari video device menggunakan deviceId terpilih
-                    // Selalu gunakan kamera belakang via environment constraint
-                    let isProcessing = false;
-
-                    barcodeReader.decodeFromConstraints(
-                        { video: { facingMode: { exact: "environment" } } },
-                        cameraVideo,
-                        (result, err) => {
-                            if (result) {
-                                const barcode = result.text.trim();
-                                const barcodeType = getBarcodeTypeNameZXing(
-                                    result.barcodeFormat,
-                                );
-
-                                if (barcode.length >= 2) {
-                                    if (isProcessing) return;
-                                    isProcessing = true;
-
-                                    // Tampilkan overlay tahan stabil di atas video
-                                    document.getElementById("processingOverlay").classList.add("show");
-
-                                    setTimeout(() => {
-                                        // Sembunyikan overlay
-                                        document.getElementById("processingOverlay").classList.remove("show");
-
-                                        // Reset & tutup kamera setelah barcode ditemukan
-                                        barcodeReader.reset();
-                                        cameraActive = false;
-                                        isProcessing = false;
-
-                                        document.querySelector(
-                                            ".camera-preview-container",
-                                        ).style.display = "none";
-                                        cameraToggleBtn.classList.remove("active");
-                                        cameraToggleBtn.innerHTML =
-                                            "🎥 Aktifkan Kamera";
-
-                                        stopTorch();
-                                        processBarcodeSearch(barcode, barcodeType);
-                                    }, 800);
-                                    return;
-                                }
-                            }
-
-                            if (
-                                err &&
-                                !(err instanceof ZXing.NotFoundException)
-                            ) {
-                                console.error("Barcode detection error:", err);
-                            }
-                        },
-                    );
-
-                    // Tunggu stream siap lalu ambil video track untuk kontrol senter
-                    const onVideoReady = () => {
-                        const stream = cameraVideo.srcObject;
-                        if (!stream) return;
-                        activeVideoTrack = stream.getVideoTracks()[0] || null;
-                        if (activeVideoTrack) {
-                            // Tampilkan tombol dulu, cek support setelah sedikit delay
-                            // karena getCapabilities() bisa belum siap tepat saat loadedmetadata
-                            torchBtn.style.display = "block";
-                            torchBtn.innerHTML = "🔦 Senter";
-                            setTimeout(() => {
-                                const cap = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
-                                if (!cap.torch) {
-                                    torchBtn.style.display = "none";
-                                }
-                            }, 500);
-                        }
-                    };
-                    if (cameraVideo.readyState >= 1) {
-                        onVideoReady();
-                    } else {
-                        cameraVideo.addEventListener("loadedmetadata", onVideoReady, { once: true });
+                    // Ambil video track untuk senter
+                    activeVideoTrack = cameraStream.getVideoTracks()[0] || null;
+                    if (activeVideoTrack) {
+                        torchBtn.style.display = "block";
+                        torchBtn.innerHTML = "🔦 Senter";
+                        setTimeout(() => {
+                            const cap = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
+                            if (!cap.torch) torchBtn.style.display = "none";
+                        }, 500);
                     }
 
-                    showCameraStatus(
-                        "✅ Kamera siap. Arahkan ke barcode/QR code",
-                        "success",
-                    );
-                    console.log(
-                        "Started decode from back camera (environment)",
-                    );
+                    // Mulai loop scan setiap 200ms
+                    scanLoopId = setInterval(captureAndDecode, 200);
+
+                    showCameraStatus("✅ Kamera siap. Arahkan ke barcode/QR code", "success");
+                    console.log("Started canvas-crop scan loop");
                 } catch (e) {
                     showCameraStatus(`❌ Error: ${e.message}`, "error");
                     console.error(e);
@@ -1491,16 +1512,21 @@
 
             function stopCamera() {
                 cameraActive = false;
+                isProcessing = false;
 
-                if (barcodeReader) {
-                    barcodeReader.reset();
+                if (scanLoopId) {
+                    clearInterval(scanLoopId);
+                    scanLoopId = null;
+                }
+
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(t => t.stop());
+                    cameraStream = null;
                 }
 
                 stopTorch();
 
-                document.querySelector(
-                    ".camera-preview-container",
-                ).style.display = "none";
+                document.querySelector(".camera-preview-container").style.display = "none";
                 cameraToggleBtn.classList.remove("active");
                 cameraToggleBtn.innerHTML = "🎥 Aktifkan Kamera";
                 showCameraStatus("Kamera dimatikan", "info");
