@@ -347,6 +347,24 @@
                 background: #d32f2f;
             }
 
+            /* Style baru untuk tombol upload */
+            .upload-toggle {
+                flex: 1;
+                min-width: 150px;
+                padding: 12px 15px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+            }
+
+            .upload-toggle:hover {
+                background: #7b1fa2;
+            }
+
             .torch-toggle {
                 flex: 1;
                 min-width: 120px;
@@ -637,7 +655,7 @@
                         color: var(--text-muted);
                         margin-bottom: 10px;
                     "
-                    >📷 SCAN KAMERA</label
+                    >📷 SCAN KAMERA / FOTO</label
                 >
                 <div class="camera-preview-container">
                     <video id="cameraVideo" playsinline autoplay muted></video>
@@ -653,6 +671,11 @@
                     <button id="cameraToggleBtn" class="camera-toggle">
                         🎥 Aktifkan Kamera
                     </button>
+                    <button id="uploadImageBtn" class="upload-toggle">
+                        📁 Upload Foto
+                    </button>
+                    <input type="file" id="fileInputBarcode" accept="image/*" style="display: none;">
+                    
                     <button id="torchBtn" class="torch-toggle">
                         🔦 Senter
                     </button>
@@ -718,7 +741,6 @@
                 const db = await openDB();
                 return new Promise((resolve, reject) => {
                     const tx = db.transaction(UPLOAD_STORE, "readwrite");
-                    // Salin buffer agar tidak terpengaruh perubahan referensi luar
                     const copy = data.slice();
                     tx.objectStore(UPLOAD_STORE).put({ name, data: copy });
                     tx.oncomplete = () => resolve();
@@ -755,7 +777,6 @@
 
                 await renderUploadFileList();
 
-                // Muat data dari cache unggahan
                 const files = await getUploadedFiles();
                 if (files.length > 0) {
                     statusText.innerText = "⏳ Memuat data dari file yang diunggah...";
@@ -805,20 +826,17 @@
                 statusText.innerText = "Mengecek versi data...";
 
                 try {
-                    // Ambil info dari server
                     const path = `database/${selectedDiv}/list_files.json?t=${Date.now()}`;
                     const response = await fetch(path);
                     const serverData = await response.json();
 
-                    const serverVersion = serverData.version; // String versi di JSON
+                    const serverVersion = serverData.version;
                     const serverFiles = serverData.files.map(
                         (f) => `database/${selectedDiv}/${f}`,
                     );
 
-                    // Cek data di cache HP
                     const cached = await getCachedData(num);
 
-                    // KRITERIAL: Jangan download ulang jika versi sama
                     if (cached && cached.version === serverVersion) {
                         allData = cached.data;
                         EXCEL_FILES = cached.files;
@@ -869,7 +887,6 @@
                 }
 
                 allData = freshData;
-                // Simpan Data, Daftar File, dan Versi ke Cache
                 await setCachedData(selectedDiv, {
                     data: allData,
                     files: EXCEL_FILES,
@@ -888,7 +905,6 @@
             function formatDiscount(val) {
                 if (val === undefined || val === null || val === "") return "-";
                 const num = parseFloat(val);
-                // SHARP jika diskon 0 atau 1 (100%)
                 if (num === 0 || num === 1) return "SHARP";
                 if (!isNaN(num) && num > 0 && num < 1)
                     return (num * 100).toFixed(0) + "%";
@@ -908,18 +924,8 @@
             function formatDisplayDate(dateObj) {
                 if (!dateObj) return "-";
                 const months = [
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "Mei",
-                    "Jun",
-                    "Jul",
-                    "Agu",
-                    "Sep",
-                    "Okt",
-                    "Nov",
-                    "Des",
+                    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+                    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
                 ];
                 return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
             }
@@ -940,7 +946,6 @@
             const loadingBar = document.getElementById("loadingBar");
             const clearSearchBtn = document.getElementById("clearSearchBtn");
 
-            // Clear search button functionality
             clearSearchBtn.addEventListener("click", () => {
                 searchInput.value = "";
                 resultsContainer.innerHTML = "";
@@ -951,7 +956,6 @@
             });
 
             searchInput.addEventListener("input", () => {
-                // Toggle clear button visibility
                 if (searchInput.value.length > 0) {
                     clearSearchBtn.style.display = "flex";
                 } else {
@@ -964,7 +968,6 @@
                 resultsContainer.innerHTML = "";
                 if (query.length < 3) return;
 
-                // GMT+7 Jakarta Time
                 const now = new Date();
                 const jakartaTime = new Date(
                     now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }),
@@ -991,7 +994,6 @@
                         );
                     })
                     .sort((a, b) => {
-                        // Urutkan berdasarkan FROM DATE terbaru (terbesar) paling atas
                         const dateA = parseToDate(
                             a["FROM DATE"] || a["FROM_DATE"],
                         );
@@ -1000,11 +1002,10 @@
                         );
                         const timeA = dateA ? dateA.getTime() : 0;
                         const timeB = dateB ? dateB.getTime() : 0;
-                        return timeB - timeA; // Descending: terbaru dulu
+                        return timeB - timeA;
                     })
                     .slice(0, 60);
 
-                // Tentukan SKU mana yang FROM DATE terbesar per SKU
                 const skuLatestDate = {};
                 filtered.forEach((item) => {
                     const sku = String(item.SKU || "").trim();
@@ -1038,15 +1039,12 @@
                     const hasSpecialChars = /[BD%]/i.test(promoPriceRaw);
                     const isSharp = discountLabel === "SHARP";
 
-                    // Cek apakah ini FROM DATE terbesar untuk SKU ini
                     const sku = String(item.SKU || "").trim();
                     const fromDateNum = fromDate ? fromDate.getTime() : 0;
                     const isLatestForSKU =
                         !sku || skuLatestDate[sku] === fromDateNum;
 
                     let statusHtml = "";
-                    // Pastikan todayStr sudah didefinisikan di luar loop dengan format 'YYYY-MM-DD'
-                    // Contoh: const todayStr = new Date().toISOString().split('T')[0];
 
                     if (fromDate && toDate) {
                         const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
@@ -1065,10 +1063,6 @@
                             label = "Non-Aktif";
                             css = "status-non";
                         }
-
-                        // Hanya gunakan isLatestForSKU jika kamu ingin menandai
-                        // promo lama yang menumpuk sebagai berakhir secara manual.
-                        // Jika ingin murni berdasarkan tanggal, biarkan logika di atas.
 
                         statusHtml = `<span class="status-label ${css}">● ${label}</span>`;
                     }
@@ -1189,17 +1183,12 @@
                 let loaded = 0;
                 for (const file of files) {
                     try {
-                        // Baca file menjadi ArrayBuffer
                         const buf = await file.arrayBuffer();
-
-                        // Buat DUA salinan terpisah: satu untuk disimpan, satu untuk dibaca XLSX
                         const arrForStore = new Uint8Array(buf.slice(0));
                         const arrForRead  = new Uint8Array(buf.slice(0));
 
-                        // Simpan ke IndexedDB dan tunggu benar-benar selesai
                         await saveUploadedFile(file.name, arrForStore);
 
-                        // Parse dari salinan terpisah
                         const wb = XLSX.read(arrForRead, { type: "array" });
                         wb.SheetNames.forEach(sn => {
                             allData.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn]));
@@ -1224,7 +1213,7 @@
                 if (e.target == dbModal) dbModal.style.display = "none";
             };
 
-            // --- BARCODE SEARCH FUNCTION (untuk camera scanning) ---
+            // --- BARCODE SEARCH FUNCTION ---
             let detectedBarcodeType = "";
 
             function getBarcodeTypeNameZXing(format) {
@@ -1252,7 +1241,7 @@
             }
 
             function processBarcodeSearch(barcode, barcodeType = "UNKNOWN") {
-                if (!selectedDiv) {
+                if (!selectedDiv && !isUploadMode) {
                     showCameraStatus(
                         "❌ Pilih divisi terlebih dahulu",
                         "error",
@@ -1262,18 +1251,13 @@
 
                 detectedBarcodeType = barcodeType;
 
-                // Isi textbox searchInput dengan barcode
                 searchInput.value = barcode;
 
-                // Tampilkan info tipe barcode
-                const barcodeTypeInfo =
-                    document.getElementById("barcodeTypeInfo");
-                const barcodeTypeTag =
-                    document.getElementById("barcodeTypeTag");
+                const barcodeTypeInfo = document.getElementById("barcodeTypeInfo");
+                const barcodeTypeTag = document.getElementById("barcodeTypeTag");
                 barcodeTypeTag.innerHTML = `<strong>${barcodeType}</strong> | <code style="background: #f0f0f0; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${barcode}</code>`;
                 barcodeTypeInfo.style.display = "block";
 
-                // Trigger input event untuk menjalankan search
                 const event = new Event("input", { bubbles: true });
                 searchInput.dispatchEvent(event);
 
@@ -1284,14 +1268,14 @@
                 }
             }
 
-            // --- 5. CAMERA BARCODE SCANNING ---
+            // --- 5. CAMERA & IMAGE UPLOAD SCANNING ---
             const cameraToggleBtn = document.getElementById("cameraToggleBtn");
+            const uploadImageBtn = document.getElementById("uploadImageBtn");
+            const fileInputBarcode = document.getElementById("fileInputBarcode");
             const cameraVideo = document.getElementById("cameraVideo");
-            const cameraCanvas = document.getElementById("cameraCanvas");
             const cameraStatus = document.getElementById("cameraStatus");
             let cameraActive = false;
 
-            // ZXing BrowserMultiFormatReader untuk deteksi barcode
             let barcodeReader = null;
             let torchOn = false;
             let activeVideoTrack = null;
@@ -1363,7 +1347,6 @@
                 }
             }
 
-            // Inisialisasi ZXing saat halaman siap
             function initZXing() {
                 if (typeof ZXing === "undefined") {
                     setTimeout(initZXing, 300);
@@ -1375,6 +1358,50 @@
 
             let isProcessing = false;
 
+            // --- Fitur Scan dari Foto (Upload) ---
+            uploadImageBtn.addEventListener("click", () => {
+                if (!selectedDiv && !isUploadMode) {
+                    showCameraStatus("❌ Pilih divisi terlebih dahulu", "error");
+                    return;
+                }
+                fileInputBarcode.click();
+            });
+
+            fileInputBarcode.addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                showCameraStatus("⏳ Memproses gambar...", "info");
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const imgUrl = event.target.result;
+                    const imgElement = new Image();
+                    imgElement.src = imgUrl;
+
+                    imgElement.onload = () => {
+                        if (!barcodeReader) {
+                            barcodeReader = new ZXing.BrowserMultiFormatReader();
+                        }
+
+                        barcodeReader.decodeFromImageElement(imgElement)
+                            .then((result) => {
+                                const barcode = result.text.trim();
+                                const barcodeType = getBarcodeTypeNameZXing(result.barcodeFormat);
+                                processBarcodeSearch(barcode, barcodeType);
+                                fileInputBarcode.value = ""; // reset
+                            })
+                            .catch((err) => {
+                                console.error(err);
+                                showCameraStatus("❌ Barcode tidak terbaca di gambar tersebut", "error");
+                                fileInputBarcode.value = ""; // reset
+                            });
+                    };
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // --- Fitur Scan dari Video Kamera Lagsung ---
             async function startCamera() {
                 try {
                     if (typeof ZXing === "undefined" || !barcodeReader) {
@@ -1385,7 +1412,6 @@
 
                     showCameraStatus("⏳ Membuka kamera...", "info");
 
-                    // Memulai pemindaian dari video secara langsung dengan ZXing
                     barcodeReader.decodeFromVideoDevice(null, cameraVideo, (result, err) => {
                         if (result) {
                             if (isProcessing || !cameraActive) return;
@@ -1410,14 +1436,12 @@
                         }
                     });
 
-                    // Update UI Kamera Aktif
                     document.querySelector(".camera-preview-container").style.display = "block";
                     cameraActive = true;
                     isProcessing = false;
                     cameraToggleBtn.classList.add("active");
                     cameraToggleBtn.innerHTML = "❌ Matikan Kamera";
 
-                    // Ambil video track untuk Senter (Beri sedikit jeda agar ZXing selesai set srcObject)
                     setTimeout(() => {
                         if (cameraVideo.srcObject) {
                             const tracks = cameraVideo.srcObject.getVideoTracks();
@@ -1446,7 +1470,6 @@
                 cameraActive = false;
                 isProcessing = false;
 
-                // Fungsi reset dari ZXing otomatis memberhentikan stream dan proses dekode
                 if (barcodeReader) {
                     barcodeReader.reset();
                 }
@@ -1474,7 +1497,6 @@
                 }
             });
 
-            // Jalankan inisialisasi ZXing saat halaman load
             window.addEventListener("load", initZXing);
 
             initTheme();
