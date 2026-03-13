@@ -595,7 +595,7 @@
             <div
                 class="camera-section"
                 id="cameraSectionWrapper"
-                style="display: none" // default kamera aktif, bisa diubah ke "none" untuk nonaktifkan kamera saat load awal
+                style="display: block" // default kamera aktif, bisa diubah ke "none" untuk nonaktifkan kamera saat load awal
             >
                 <label
                     style="
@@ -944,11 +944,13 @@
                         const a = String(item.ARTICLE || "").toLowerCase();
                         const d = String(item.DESCRIPTION || "").toLowerCase();
                         const ac = String(item.ACARA || "").toLowerCase();
+                        const upc = String(item.UPC || "").toLowerCase();
                         return (
                             s.includes(query) ||
                             a.includes(query) ||
                             d.includes(query) ||
-                            ac.includes(query)
+                            ac.includes(query) ||
+                            upc.includes(query)
                         );
                     })
                     .sort((a, b) => {
