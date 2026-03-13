@@ -1397,16 +1397,28 @@
                         },
                     );
 
-                    // Ambil video track untuk kontrol senter
-                    const stream = cameraVideo.srcObject;
-                    if (stream) {
+                    // Tunggu stream siap lalu ambil video track untuk kontrol senter
+                    const onVideoReady = () => {
+                        const stream = cameraVideo.srcObject;
+                        if (!stream) return;
                         activeVideoTrack = stream.getVideoTracks()[0] || null;
                         if (activeVideoTrack) {
-                            const cap = activeVideoTrack.getCapabilities();
-                            if (cap.torch) {
-                                torchBtn.style.display = "block";
-                            }
+                            // Tampilkan tombol dulu, cek support setelah sedikit delay
+                            // karena getCapabilities() bisa belum siap tepat saat loadedmetadata
+                            torchBtn.style.display = "block";
+                            torchBtn.innerHTML = "🔦 Senter";
+                            setTimeout(() => {
+                                const cap = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
+                                if (!cap.torch) {
+                                    torchBtn.style.display = "none";
+                                }
+                            }, 500);
                         }
+                    };
+                    if (cameraVideo.readyState >= 1) {
+                        onVideoReady();
+                    } else {
+                        cameraVideo.addEventListener("loadedmetadata", onVideoReady, { once: true });
                     }
 
                     showCameraStatus(
