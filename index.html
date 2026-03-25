@@ -747,7 +747,8 @@
 
     <div class="controls-bottom">
         <button id="themeToggle" class="btn-float">🌙 Mode Gelap</button>
-        <button id="weeklyPromoBtn" class="btn-float" style="border-color: #2e7d32;">📅 Weekly Promo</button>
+        <button id="weeklyPromoBtn" class="btn-float" style="border-color: #2e7d32; display: none">📅 Weekly
+            Promo</button>
         <button id="dbToggle" class="btn-float">📁 Database</button>
         <button onclick="document.getElementById('divisionOverlay').style.display ='flex'" class="btn-float">🏢 Ganti
             Divisi</button>
@@ -827,7 +828,7 @@
             <span id="barcodeTypeTag"></span>
         </div>
 
-        <div class="camera-section" id="cameraSectionWrapper" style="display: block">
+        <div class="camera-section" id="cameraSectionWrapper" style="display: none">
             <label style="
                         display: block;
                         font-size: 13px;
@@ -1191,19 +1192,30 @@
                 })
                 .slice(0, 60);
 
-            const skuLatestDate = {};
+            const skuActiveLatestFromDate = {};
             filtered.forEach((item) => {
                 const sku = String(item.SKU || "").trim();
                 if (sku) {
                     const fromDate = parseToDate(
                         item["FROM DATE"] || item["FROM_DATE"],
                     );
-                    const fromDateNum = fromDate ? fromDate.getTime() : 0;
-                    if (
-                        !skuLatestDate[sku] ||
-                        fromDateNum > skuLatestDate[sku]
-                    ) {
-                        skuLatestDate[sku] = fromDateNum;
+                    const toDate = parseToDate(
+                        item["TO DATE"] || item["TO_DATE"],
+                    );
+                    if (fromDate && toDate) {
+                        const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
+                        const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, "0")}-${String(toDate.getDate()).padStart(2, "0")}`;
+
+                        // Hanya pantau max fromDate untuk promo yang seharusnya "Aktif" hari ini
+                        if (todayStr >= fStr && todayStr <= tStr) {
+                            const fromDateNum = fromDate.getTime();
+                            if (
+                                !skuActiveLatestFromDate[sku] ||
+                                fromDateNum > skuActiveLatestFromDate[sku]
+                            ) {
+                                skuActiveLatestFromDate[sku] = fromDateNum;
+                            }
+                        }
                     }
                 }
             });
@@ -1226,8 +1238,6 @@
 
                 const sku = String(item.SKU || "").trim();
                 const fromDateNum = fromDate ? fromDate.getTime() : 0;
-                const isLatestForSKU =
-                    !sku || skuLatestDate[sku] === fromDateNum;
 
                 let statusHtml = "";
 
@@ -1242,8 +1252,13 @@
                         label = "BERAKHIR";
                         css = "status-non";
                     } else if (todayStr >= fStr && todayStr <= tStr) {
-                        label = "Aktif";
-                        css = "status-aktif";
+                        if (sku && skuActiveLatestFromDate[sku] && fromDateNum < skuActiveLatestFromDate[sku]) {
+                            label = "BERAKHIR";
+                            css = "status-non";
+                        } else {
+                            label = "Aktif";
+                            css = "status-aktif";
+                        }
                     } else {
                         label = "Non-Aktif";
                         css = "status-non";
