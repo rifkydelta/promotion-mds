@@ -695,6 +695,95 @@
                 font-size: 11px;
             }
         }
+
+        /* ============================= */
+        /* FILE VIEWER TABLE (Dark Mode) */
+        /* ============================= */
+        #fileViewTableContainer {
+            background: var(--bg-card);
+        }
+
+        .fv-tab-bar {
+            display: flex;
+            gap: 6px;
+            padding: 10px 12px;
+            background: var(--bg-body);
+            border-bottom: 1px solid var(--shadow);
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .fv-sheet-tab {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: background 0.2s, color 0.2s;
+            background: var(--input-bg);
+            color: var(--text-muted);
+            border: 1px solid var(--shadow);
+        }
+
+        .fv-sheet-tab.active {
+            background: var(--border-pink);
+            color: #fff;
+            border-color: var(--border-pink);
+        }
+
+        .fv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            font-family: sans-serif;
+            color: var(--text-main);
+        }
+
+        .fv-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--border-pink);
+            color: #fff;
+            padding: 7px 8px;
+            border: 1px solid var(--border-pink);
+            text-transform: uppercase;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .fv-table tbody tr {
+            transition: background 0.15s;
+        }
+
+        .fv-table tbody tr:nth-child(odd) {
+            background: var(--bg-card);
+        }
+
+        .fv-table tbody tr:nth-child(even) {
+            background: var(--bg-body);
+        }
+
+        .fv-table tbody tr:hover {
+            background: var(--bg-period);
+        }
+
+        .fv-table td {
+            border: 1px solid var(--shadow);
+            padding: 4px 6px;
+            color: var(--text-main);
+            word-break: break-word;
+        }
+
+        .fv-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 
@@ -766,7 +855,8 @@
 
     <!-- Modal Lihat Isi File Excel -->
     <div id="fileViewModal" class="modal">
-        <div class="modal-content" style="max-width:95%; width:1200px; height:85vh; display:flex; flex-direction:column; margin:3% auto; padding:0; overflow:hidden;">
+        <div class="modal-content"
+            style="max-width:95%; width:1200px; height:85vh; display:flex; flex-direction:column; margin:3% auto; padding:0; overflow:hidden;">
             <div class="modal-header" style="padding:14px 20px; flex-shrink:0;">
                 <h3 id="fileViewTitle" style="margin:0; font-size:16px;">📄 Isi File</h3>
                 <span id="closeFileViewModal" style="cursor:pointer; font-size:24px;">&times;</span>
@@ -1005,13 +1095,13 @@
                 for (const f of files) {
                     try {
                         const wb = XLSX.read(f.data, { type: "array" });
-                        const fileRows = [];
+                        const sheetsObj = {};
                         wb.SheetNames.forEach(sn => {
                             const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                            fileRows.push(...data);
+                            sheetsObj[sn] = data;
                             freshData.push(...data);
                         });
-                        await saveFileContent(f.name, fileRows);
+                        await saveFileContent(f.name, sheetsObj);
                         loaded++;
                         loadingBar.style.width = `${(loaded / files.length) * 100}%`;
                     } catch (e) { console.error(e); }
@@ -1095,15 +1185,15 @@
                     const resp = await fetch(`${file}?t=${Date.now()}`);
                     const buf = await resp.arrayBuffer();
                     const wb = XLSX.read(buf, { type: "array" });
-                    const fileRows = [];
+                    const sheetsObj = {};
                     wb.SheetNames.forEach((sn) => {
                         const data = XLSX.utils.sheet_to_json(
                             wb.Sheets[sn],
                         );
-                        fileRows.push(...data);
+                        sheetsObj[sn] = data;
                         freshData.push(...data);
                     });
-                    await saveFileContent(file, fileRows);
+                    await saveFileContent(file, sheetsObj);
                     loaded++;
                     loadingBar.style.width = `${(loaded / targetFiles.length) * 100}%`;
                     statusText.innerText = `Updating: ${loaded}/${targetFiles.length} file...`;
@@ -1373,7 +1463,7 @@
                 ? EXCEL_FILES.map(
                     (f) => {
                         const displayName = f.split("/").pop();
-                        return `<li class="file-item" style="cursor:pointer;" onclick="viewFileContent('${f.replace(/'/g, "\\'")}')">📄 ${displayName}</li>`;
+                        return `<li class="file-item" style="cursor:pointer;" onclick="viewFileContent('${f.replace(/'/g, "\\'")}')">${displayName}</li>`;
                     }
                 ).join("")
                 : '<li class="file-item">Kosong</li>';
@@ -1432,13 +1522,13 @@
                     await saveUploadedFile(file.name, arrForStore);
 
                     const wb = XLSX.read(arrForRead, { type: "array" });
-                    const fileRows = [];
+                    const sheetsObj = {};
                     wb.SheetNames.forEach(sn => {
                         const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                        fileRows.push(...data);
+                        sheetsObj[sn] = data;
                         allData.push(...data);
                     });
-                    await saveFileContent(file.name, fileRows);
+                    await saveFileContent(file.name, sheetsObj);
 
                     if (!EXCEL_FILES.includes(file.name)) EXCEL_FILES.push(file.name);
                     loaded++;
@@ -1471,14 +1561,14 @@
             const displayName = fileName.split("/").pop();
 
             titleEl.innerText = `⏳ Memuat ${displayName}...`;
-            container.innerHTML = `<p style="text-align:center; padding:40px; color:#888;">Memuat data...</p>`;
+            container.innerHTML = `<p class="fv-empty">Memuat data...</p>`;
             modal.style.display = "block";
 
-            // Coba ambil dari fileContentStore (cache per-file)
-            let rows = await getFileContent(fileName);
+            // Coba ambil dari fileContentStore (cache per-file, format: {sheetName: rows[]})
+            let sheetsData = await getFileContent(fileName);
 
             // Fallback: jika upload mode, baca raw binary dari UPLOAD_STORE
-            if (!rows && isUploadMode) {
+            if (!sheetsData && isUploadMode) {
                 try {
                     const db = await openDB();
                     const tx = db.transaction(UPLOAD_STORE, "readonly");
@@ -1486,47 +1576,105 @@
                     const fileRecord = await new Promise(r => { req.onsuccess = () => r(req.result); });
                     if (fileRecord && fileRecord.data) {
                         const wb = XLSX.read(fileRecord.data, { type: "array" });
-                        rows = [];
+                        sheetsData = {};
                         wb.SheetNames.forEach(sn => {
-                            rows.push(...XLSX.utils.sheet_to_json(wb.Sheets[sn]));
+                            sheetsData[sn] = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
                         });
-                        await saveFileContent(fileName, rows);
+                        await saveFileContent(fileName, sheetsData);
                     }
                 } catch (e) { console.error(e); }
             }
 
-            if (!rows || rows.length === 0) {
+            // Kompatibilitas: jika data lama berupa array flat, konvert ke format sheet
+            if (Array.isArray(sheetsData)) {
+                sheetsData = { "Sheet1": sheetsData };
+            }
+
+            if (!sheetsData || Object.keys(sheetsData).length === 0) {
                 titleEl.innerText = `📄 ${displayName}`;
-                container.innerHTML = `<p style="text-align:center; padding:40px; color:#999;">Tidak ada data. Silakan muat ulang divisi atau unggah ulang file ini.</p>`;
+                container.innerHTML = `<p class="fv-empty">Tidak ada data. Silakan muat ulang divisi atau unggah ulang file ini.</p>`;
                 return;
             }
 
-            titleEl.innerText = `📄 ${displayName} — ${rows.length} baris`;
+            const sheetNames = Object.keys(sheetsData);
+            const totalRows = sheetNames.reduce((sum, sn) => sum + (sheetsData[sn]?.length || 0), 0);
+            titleEl.innerText = `📄 ${displayName} — ${totalRows} baris, ${sheetNames.length} sheet`;
 
-            // Kumpulkan semua kolom
-            const colSet = new Set();
-            rows.forEach(r => Object.keys(r).forEach(k => colSet.add(k)));
-            const cols = Array.from(colSet);
-
-            let html = `<table style="width:100%; border-collapse:collapse; font-size:11px; font-family:sans-serif;">`;
-            html += `<thead><tr>`;
-            cols.forEach(c => {
-                html += `<th style="position:sticky; top:0; z-index:2; background:var(--bg-hover,#e0e0e0); color:var(--text-main,#333); padding:6px 8px; border:1px solid #ccc; text-transform:uppercase; font-weight:bold; white-space:nowrap;">${c}</th>`;
-            });
-            html += `</tr></thead><tbody>`;
-
-            rows.forEach((row, i) => {
-                const bg = i % 2 === 0 ? "#fff" : "#f7f7f7";
-                html += `<tr style="background:${bg};">`;
-                cols.forEach(col => {
-                    const val = row[col] !== undefined && row[col] !== null ? row[col] : "";
-                    html += `<td style="border:1px solid #e0e0e0; padding:4px 6px; color:#333; word-break:break-word;">${val}</td>`;
+            // Buat tabs jika lebih dari 1 sheet
+            let html = '';
+            if (sheetNames.length > 1) {
+                html += `<div class="fv-tab-bar">`;
+                sheetNames.forEach((sn, idx) => {
+                    const isActive = idx === 0;
+                    html += `<button class="fv-sheet-tab${isActive ? ' active' : ''}" data-sheet="fv-sheet-${idx}">${sn} (${sheetsData[sn]?.length || 0})</button>`;
                 });
-                html += `</tr>`;
+                html += `</div>`;
+            }
+
+            // Buat tabel per sheet
+            sheetNames.forEach((sn, idx) => {
+                const rows = sheetsData[sn] || [];
+                const isActive = idx === 0;
+                html += `<div class="fv-sheet-content" id="fv-sheet-${idx}" style="display:${isActive ? 'block' : 'none'}; overflow:auto; height:100%;">`;
+
+                if (rows.length === 0) {
+                    html += `<p class="fv-empty">Sheet "${sn}" kosong.</p>`;
+                } else {
+                    const colSet = new Set();
+                    rows.forEach(r => Object.keys(r).forEach(k => colSet.add(k)));
+                    const cols = Array.from(colSet);
+
+                    html += `<table class="fv-table">`;
+                    html += `<thead><tr>`;
+                    cols.forEach(c => {
+                        html += `<th>${c}</th>`;
+                    });
+                    html += `</tr></thead><tbody>`;
+
+                    rows.forEach((row, i) => {
+                        const skuVal = String(row['SKU'] || row['sku'] || row['Sku'] || '').trim();
+                        html += `<tr${skuVal ? ` data-sku="${skuVal}" style="cursor:pointer;" title="Klik untuk cari SKU: ${skuVal}"` : ''}>`;
+                        cols.forEach(col => {
+                            const val = row[col] !== undefined && row[col] !== null ? row[col] : '';
+                            html += `<td>${val}</td>`;
+                        });
+                        html += `</tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+                html += `</div>`;
             });
 
-            html += `</tbody></table>`;
             container.innerHTML = html;
+
+            // Klik baris tabel → cari SKU
+            container.querySelectorAll('.fv-table tbody tr[data-sku]').forEach(tr => {
+                tr.addEventListener('click', () => {
+                    const sku = tr.getAttribute('data-sku');
+                    if (!sku) return;
+                    // Tutup kedua modal
+                    document.getElementById('fileViewModal').style.display = 'none';
+                    dbModal.style.display = 'none';
+                    // Isi search box dan trigger pencarian
+                    searchInput.value = sku;
+                    const ev = new Event('input', { bubbles: true });
+                    searchInput.dispatchEvent(ev);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (navigator.vibrate) navigator.vibrate(50);
+                });
+            });
+
+            // Event listener untuk tabs sheet
+            const tabBtns = container.querySelectorAll('.fv-sheet-tab');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    container.querySelectorAll('.fv-sheet-content').forEach(s => s.style.display = 'none');
+                    const targetId = e.target.getAttribute('data-sheet');
+                    container.querySelector(`#${targetId}`).style.display = 'block';
+                });
+            });
         }
 
         // --- BARCODE SEARCH FUNCTION ---
