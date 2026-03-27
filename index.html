@@ -2236,11 +2236,9 @@
 
             // 1. Bersihkan teks dari label "NEW" dan spasi berlebih
             let rawText = td.innerText.replace(/NEW/gi, "").trim();
-            let len = rawText.length;
-            let finalSearchText = "";
 
-            // Bersihkan karakter selain huruf, angka, dan % di akhir teks
-            finalSearchText = finalSearchText.replace(/[^a-zA-Z0-9%]+$/, '');
+            // 2. Bersihkan karakter selain huruf, angka, dan % di akhir teks
+            let finalSearchText = rawText.replace(/[^a-zA-Z0-9%]+$/, '');
 
             // 3. Eksekusi ke Search Box
             if (finalSearchText) {
