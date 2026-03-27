@@ -7,7 +7,9 @@
     <title>Promo Searcher - Matahari</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script async src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <link rel="shortcut icon" href="//matahari.com/cdn/shop/files/favicon_32x32.webp?v=1735363635" type="image/png">
     <style>
         :root {
             --bg-body: #f4f7f6;
@@ -885,8 +887,8 @@
                     background:#3949ab; color:#fff; font-size:13px; font-weight:bold;
                     cursor:pointer; border:none;
                 ">
-                📂 Tambah Excel
-                <input id="uploadFileInput" type="file" accept=".xlsx" multiple style="display:none">
+                📂 Tambah Excel / ZIP
+                <input id="uploadFileInput" type="file" accept=".xlsx, .zip" multiple style="display:none">
             </label>
             <span id="uploadFileCount" style="font-size:12px; color:var(--text-muted); white-space:nowrap;"></span>
             <button id="deleteUploadBtn" style="
@@ -1484,7 +1486,7 @@
             e.preventDefault();
             e.currentTarget.style.background = "";
             const files = Array.from(e.dataTransfer.files).filter(f =>
-                f.name.toLowerCase().endsWith(".xlsx") && !f.name.startsWith("~$")
+                (f.name.toLowerCase().endsWith(".xlsx") || f.name.toLowerCase().endsWith(".zip")) && !f.name.startsWith("~$")
             );
             if (files.length > 0) await processUploadedFiles(files);
         });
@@ -1515,22 +1517,55 @@
             let loaded = 0;
             for (const file of files) {
                 try {
-                    const buf = await file.arrayBuffer();
-                    const arrForStore = new Uint8Array(buf.slice(0));
-                    const arrForRead = new Uint8Array(buf.slice(0));
+                    if (file.name.toLowerCase().endsWith(".zip")) {
+                        const jszip = new JSZip();
+                        const zip = await jszip.loadAsync(file);
 
-                    await saveUploadedFile(file.name, arrForStore);
+                        const xlsxFiles = Object.keys(zip.files).filter(filename =>
+                            filename.toLowerCase().endsWith(".xlsx") && !filename.split('/').pop().startsWith("~$") && !zip.files[filename].dir
+                        );
 
-                    const wb = XLSX.read(arrForRead, { type: "array" });
-                    const sheetsObj = {};
-                    wb.SheetNames.forEach(sn => {
-                        const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
-                        sheetsObj[sn] = data;
-                        allData.push(...data);
-                    });
-                    await saveFileContent(file.name, sheetsObj);
+                        statusText.innerText = `⏳ Mengekstrak zip: ${file.name}...`;
 
-                    if (!EXCEL_FILES.includes(file.name)) EXCEL_FILES.push(file.name);
+                        for (const filename of xlsxFiles) {
+                            try {
+                                const fileData = await zip.files[filename].async("uint8array");
+                                const baseName = filename.split('/').pop();
+
+                                await saveUploadedFile(baseName, fileData);
+
+                                const wb = XLSX.read(fileData, { type: "array" });
+                                const sheetsObj = {};
+                                wb.SheetNames.forEach(sn => {
+                                    const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                                    sheetsObj[sn] = data;
+                                    allData.push(...data);
+                                });
+                                await saveFileContent(baseName, sheetsObj);
+
+                                if (!EXCEL_FILES.includes(baseName)) EXCEL_FILES.push(baseName);
+                            } catch (errInner) {
+                                console.error(`Gagal ekstrak ${filename}:`, errInner);
+                            }
+                        }
+                    } else {
+                        const buf = await file.arrayBuffer();
+                        const arrForStore = new Uint8Array(buf.slice(0));
+                        const arrForRead = new Uint8Array(buf.slice(0));
+
+                        await saveUploadedFile(file.name, arrForStore);
+
+                        const wb = XLSX.read(arrForRead, { type: "array" });
+                        const sheetsObj = {};
+                        wb.SheetNames.forEach(sn => {
+                            const data = XLSX.utils.sheet_to_json(wb.Sheets[sn]);
+                            sheetsObj[sn] = data;
+                            allData.push(...data);
+                        });
+                        await saveFileContent(file.name, sheetsObj);
+
+                        if (!EXCEL_FILES.includes(file.name)) EXCEL_FILES.push(file.name);
+                    }
                     loaded++;
                     loadingBar.style.width = `${(loaded / files.length) * 100}%`;
                     statusText.innerText = `⏳ Memproses ${loaded}/${files.length} file...`;
@@ -1540,7 +1575,7 @@
                 }
             }
             await renderUploadFileList();
-            statusText.innerText = `✅ ${loaded} file berhasil ditambahkan. Total: ${EXCEL_FILES.length} file.`;
+            statusText.innerText = `✅ Selesai ditambahkan. Total: ${EXCEL_FILES.length} file Excel.`;
             enableSearch();
         }
 
