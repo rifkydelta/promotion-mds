@@ -2239,17 +2239,8 @@
             let len = rawText.length;
             let finalSearchText = "";
 
-            // 2. Logika Pemotongan Berdasarkan Panjang Karakter
-            if (len > 25) {
-                // Jika di atas 25 karakter, potong 5 dari belakang
-                finalSearchText = rawText.slice(0, -5).trim();
-            } else if (len > 17) {
-                // Jika 17-25 karakter (dan minimal 4), potong 3 dari belakang
-                finalSearchText = rawText.slice(0, -3).trim();
-            } else {
-                // Jika teks sangat pendek (3 ke bawah), biarkan apa adanya
-                finalSearchText = rawText;
-            }
+            // Bersihkan karakter selain huruf, angka, dan % di akhir teks
+            finalSearchText = finalSearchText.replace(/[^a-zA-Z0-9%]+$/, '');
 
             // 3. Eksekusi ke Search Box
             if (finalSearchText) {
