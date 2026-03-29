@@ -224,15 +224,15 @@
             text-transform: uppercase;
             padding: 4px 8px;
             border-radius: 4px;
-            border: 1px solid currentColor;
+            color: #ffffff;
         }
 
         .status-aktif {
-            color: var(--status-aktif);
+            background-color: var(--status-aktif);
         }
 
         .status-non {
-            color: var(--status-non);
+            background-color: var(--status-non);
         }
 
         .price-container {
@@ -837,7 +837,10 @@
     </div>
 
     <div class="controls-bottom">
-        <button id="themeToggle" class="btn-float" style="padding: 0; width: 42px; height: 42px; border-radius: 50%; justify-content: center; font-size: 20px;">🌙</button>
+        <button id="themeToggle" class="btn-float"
+            style="padding: 0; width: 42px; height: 42px; border-radius: 50%; justify-content: center; font-size: 20px;">🌙</button>
+        <button id="superMurahBtn" class="btn-float" style="border-color: #fbc02d; color: #f57f17; display:none">💎
+            SUPER MURAH</button>
         <button id="weeklyPromoBtn" class="btn-float" style="border-color: #2e7d32; display:block">📅 Weekly
             Promo</button>
         <button id="dbToggle" class="btn-float">📁 Database</button>
@@ -878,6 +881,23 @@
         </div>
     </div>
 
+    <div id="superMurahModal" class="modal">
+        <div class="modal-content"
+            style="max-width: 90%; width: 500px; margin: 10% auto; display: flex; flex-direction: column; max-height: 80vh;">
+            <div class="modal-header">
+                <h3 style="margin: 0">💎 SUPER MURAH</h3>
+                <span id="closeSuperMurahModal" style="cursor: pointer; font-size: 24px">&times;</span>
+            </div>
+            <div class="fv-tab-bar" id="smTabs" style="margin-top: 15px; margin-bottom: 10px; border-radius: 8px;">
+                <button class="fv-sheet-tab active" data-filter="u100">&lt; 100K</button>
+                <button class="fv-sheet-tab" data-filter="100-150">100K-150K</button>
+                <button class="fv-sheet-tab" data-filter="150-200">150K-200K</button>
+                <button class="fv-sheet-tab" data-filter="text">B1G.../Spesial</button>
+            </div>
+            <div id="smListContainer" style="overflow-y: auto; flex: 1; padding-right: 5px;"></div>
+        </div>
+    </div>
+
     <div id="uploadPanel"
         style="display:none; margin-bottom: 14px; padding: 10px 12px; background: var(--bg-card); border-radius: 10px; border: 2px solid #3949ab; box-shadow: 0 2px 8px var(--shadow);">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -906,7 +926,8 @@
             <div id="status">Memuat data...</div>
         </div>
 
-        <div class="search-container" style="display: flex; gap: 8px; align-items: center; position: sticky; top: 0; background: var(--bg-body); z-index: 100; padding: 10px 0; margin-top: -10px;">
+        <div class="search-container"
+            style="display: flex; gap: 8px; align-items: center; position: sticky; top: 0; background: var(--bg-body); z-index: 100; padding: 10px 0; margin-top: -10px;">
             <div style="position: relative; flex: 1;">
                 <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..."
                     style="width: 100%; padding-right: 40px;">
@@ -979,6 +1000,7 @@
         let allData = [];
         let EXCEL_FILES = [];
         let selectedDiv = null;
+        let smGroupedList = [];
         let isUploadMode = false;
         const DB_NAME = "MatahariPromoCache";
         const STORE_NAME = "divisiData";
@@ -1411,12 +1433,14 @@
 
                 const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ""));
 
-                const cleanArticle = String(item.ARTICLE || "").replace(/[^a-zA-Z0-9]/g, "");
+                const cleanArticle = String(item.ARTICLE || "").trim();
                 const matahariLinkHtml = cleanArticle ? `
-                <a href="https://matahari.com/pages/search?q=${cleanArticle}" target="_blank" style="display: flex; justify-content: center; align-items: center; background: var(--bg-card); border: 2px solid var(--border-pink); padding: 8px; border-radius: 8px; text-decoration: none; margin-top: 15px; transition: opacity 0.2s; box-shadow: 0 2px 5px var(--shadow);" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <a href="https://matahari.com/pages/search?q=${encodeURIComponent(cleanArticle)}%20${item.BRAND}" target="_blank" style="display: flex; justify-content: center; align-items: center; background: var(--bg-card); border: 2px solid var(--border-pink); padding: 8px; border-radius: 8px; text-decoration: none; margin-top: 15px; transition: opacity 0.2s; box-shadow: 0 2px 5px var(--shadow);" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                     <span style="font-weight: bold; color: var(--text-main); margin-right: 8px;">Cari di</span>
                     <img src="//matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=360" alt="Matahari" srcset="//matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=180 180w, //matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=360 360w" height="24" loading="eager" class="image-element" sizes="180px" itemprop="logo" style="object-fit: contain;">
-                </a>` : "";
+                </a>
+                <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px; line-height: 1.2;">*Ada kemungkinan artikel ini tidak tersedia di Matahari.com.</div>
+                ` : "";
 
                 card.innerHTML = `
                 <div class="sku-row">
@@ -2304,6 +2328,172 @@
         };
 
         document.getElementById("closePromoModal").onclick = () => weeklyPromoModal.style.display = "none";
+
+        let smLastFilter = 'u100';
+
+        function computeSuperMurah() {
+            const activePromos = allData.filter((item) => {
+                const sku = String(item.SKU || "").trim();
+                const fromDate = parseToDate(item["FROM DATE"] || item["FROM_DATE"]);
+                const toDate = parseToDate(item["TO DATE"] || item["TO_DATE"]);
+                if (!fromDate || !toDate) return false;
+
+                const fStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
+                const tStr = `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, "0")}-${String(toDate.getDate()).padStart(2, "0")}`;
+
+                const now = new Date();
+                const jakartaTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+                const checkTime = new Date(jakartaTime.getTime() - 60000);
+                const todayStr = `${checkTime.getFullYear()}-${String(checkTime.getMonth() + 1).padStart(2, "0")}-${String(checkTime.getDate()).padStart(2, "0")}`;
+
+                return todayStr >= fStr && todayStr <= tStr;
+            });
+
+            const articleMap = {};
+
+            activePromos.forEach(item => {
+                const article = String(item.ARTICLE || "").trim();
+                if (!article) return;
+
+                const sku = String(item.SKU || "").trim();
+                const ppRaw = String(item["HARGA PROMO"] || item[" HARGA PROMO "] || "").trim();
+                let isText = /[a-zA-Z]/.test(ppRaw);
+                let numPrice = isText ? Infinity : parseFloat(ppRaw.replace(/[,. ]/g, ""));
+                if (isNaN(numPrice)) numPrice = Infinity;
+                if (!ppRaw) { isText = false; numPrice = Infinity; }
+
+                if (!articleMap[article]) {
+                    articleMap[article] = { article: article, brand: item.BRAND || "", skus: new Set(), minPrice: Infinity, texts: new Set() };
+                }
+                if (sku) articleMap[article].skus.add(sku);
+
+                if (!isText && numPrice !== Infinity) {
+                    if (numPrice < articleMap[article].minPrice) articleMap[article].minPrice = numPrice;
+                } else if (isText && ppRaw) {
+                    articleMap[article].texts.add(ppRaw.toUpperCase());
+                }
+            });
+
+            smGroupedList = Object.values(articleMap).map(g => ({
+                ...g,
+                skuCount: g.skus.size
+            }));
+
+            smGroupedList.sort((a, b) => a.minPrice - b.minPrice);
+        }
+
+        function renderSuperMurah(filter) {
+            smLastFilter = filter;
+            const container = document.getElementById("smListContainer");
+            container.innerHTML = "";
+
+            const filtered = smGroupedList.filter(g => {
+                if (filter === 'u100') return g.minPrice < 100000;
+                if (filter === '100-150') return g.minPrice >= 100000 && g.minPrice <= 150000;
+                if (filter === '150-200') return g.minPrice > 150000 && g.minPrice <= 200000;
+                if (filter === 'text') return g.texts.size > 0;
+                return false;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = "<div style='text-align:center; padding: 20px; color: gray;'>Tidak ada promo di rentang ini.</div>";
+                return;
+            }
+
+            filtered.forEach(g => {
+                const card = document.createElement("div");
+                card.className = "card sm-card";
+                card.style.cursor = "pointer";
+                card.style.transition = "transform 0.1s";
+                card.onmouseover = () => card.style.transform = "scale(1.02)";
+                card.onmouseout = () => card.style.transform = "scale(1)";
+
+                const cleanArticleName = g.article.trim();
+
+                card.onclick = () => {
+                    const inputEl = document.getElementById("searchInput");
+                    inputEl.value = cleanArticleName;
+                    document.getElementById("superMurahModal").style.display = "none";
+                    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+
+                let displayedPrice = g.minPrice !== Infinity ? rp(g.minPrice) : "";
+                if (g.texts.size > 0) {
+                    displayedPrice += (displayedPrice ? " | " : "") + Array.from(g.texts).slice(0, 2).join(", ");
+                }
+
+                card.innerHTML = `
+                    <div class="sku-row">
+                        <div class="sku-text">${g.skuCount} SKU Tersedia ${g.brand ? ` <span class="brand-text">(${g.brand})</span>` : ""}</div>
+                        <div class="badge-acara" style="background:#fff9c4; color:#f57f17; flex-shrink: 0; margin-left:10px;">💎 SUPER MURAH</div>
+                    </div>
+                    <div class="article-name">${g.article}</div>
+                    <div class="price-container" style="margin-top: 10px;">
+                        <div>
+                            <div style="font-size:10px; color:var(--text-muted);">Harga Promo / Spesial Text:</div>
+                            <div class="price-promo" style="font-size: 16px; color: var(--border-pink); font-weight: bold;">${displayedPrice}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <button style="border:none; padding: 6px 12px; border-radius: 4px; background: var(--border-pink); color:#fff; font-size: 11px; cursor: pointer;">CARI 🔍</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        document.getElementById("superMurahBtn").onclick = () => {
+            document.getElementById("superMurahModal").style.display = "block";
+
+            if (smGroupedList.length === 0) {
+                const container = document.getElementById("smListContainer");
+                container.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px 20px; text-align:center; height:100%;">
+                        <div class="processing-spinner" style="border-color: rgba(216, 27, 96, 0.2); border-top-color: #d81b60; width: 40px; height: 40px; border-width: 4px; margin-bottom: 20px;"></div>
+                        <h4 style="margin:0 0 10px 0; color:#d81b60;">💎 Mengumpulkan Data...</h4>
+                        <p style="font-size:13px; color:var(--text-muted); margin:0;">Sedang mencari promo terbaik dari ribuan artikel. Mohon tunggu sebentar ya!</p>
+                    </div>
+                `;
+
+                // Gunakan setTimeout agar browser sempat me-render UI loading sebelum main-thread sibuk
+                setTimeout(() => {
+                    computeSuperMurah();
+                    renderSuperMurah(smLastFilter);
+                }, 50);
+            } else {
+                renderSuperMurah(smLastFilter);
+            }
+        };
+
+        document.getElementById("closeSuperMurahModal").onclick = () => {
+            document.getElementById("superMurahModal").style.display = "none";
+        };
+
+        const smTabs = document.querySelectorAll("#smTabs .fv-sheet-tab");
+        smTabs.forEach(btn => {
+            btn.onclick = (e) => {
+                smTabs.forEach(b => b.classList.remove("active"));
+                e.target.classList.add("active");
+                renderSuperMurah(e.target.getAttribute("data-filter"));
+            }
+        });
+
+        // Patch to clear cache on division/upload change
+        const origSelectUploadModeSm = selectUploadMode;
+        selectUploadMode = async (...args) => {
+            smGroupedList = [];
+            return await origSelectUploadModeSm(...args);
+        };
+        const origSelectDivisionSm = selectDivision;
+        selectDivision = async (...args) => {
+            smGroupedList = [];
+            return await origSelectDivisionSm(...args);
+        };
+
+        if (window.location.href.includes("admin")) {
+            document.getElementById("superMurahBtn").style.display = "flex";
+        }
     </script>
 </body>
 
