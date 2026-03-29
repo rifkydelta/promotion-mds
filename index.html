@@ -837,7 +837,7 @@
     </div>
 
     <div class="controls-bottom">
-        <button id="themeToggle" class="btn-float">🌙 Mode Gelap</button>
+        <button id="themeToggle" class="btn-float" style="padding: 0; width: 42px; height: 42px; border-radius: 50%; justify-content: center; font-size: 20px;">🌙</button>
         <button id="weeklyPromoBtn" class="btn-float" style="border-color: #2e7d32; display:block">📅 Weekly
             Promo</button>
         <button id="dbToggle" class="btn-float">📁 Database</button>
@@ -906,7 +906,7 @@
             <div id="status">Memuat data...</div>
         </div>
 
-        <div class="search-container" style="display: flex; gap: 8px; align-items: center;">
+        <div class="search-container" style="display: flex; gap: 8px; align-items: center; position: sticky; top: 0; background: var(--bg-body); z-index: 100; padding: 10px 0; margin-top: -10px;">
             <div style="position: relative; flex: 1;">
                 <input type="text" id="searchInput" class="search-box" placeholder="Cari SKU atau Artikel..."
                     style="width: 100%; padding-right: 40px;">
@@ -1411,6 +1411,13 @@
 
                 const isText = isNaN(promoPriceRaw.replace(/[,. ]/g, ""));
 
+                const cleanArticle = String(item.ARTICLE || "").replace(/[^a-zA-Z0-9]/g, "");
+                const matahariLinkHtml = cleanArticle ? `
+                <a href="https://matahari.com/pages/search?q=${cleanArticle}" target="_blank" style="display: flex; justify-content: center; align-items: center; background: var(--bg-card); border: 2px solid var(--border-pink); padding: 8px; border-radius: 8px; text-decoration: none; margin-top: 15px; transition: opacity 0.2s; box-shadow: 0 2px 5px var(--shadow);" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight: bold; color: var(--text-main); margin-right: 8px;">Cari di</span>
+                    <img src="//matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=360" alt="Matahari" srcset="//matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=180 180w, //matahari.com/cdn/shop/files/logo.svg?v=1734071251&amp;width=360 360w" height="24" loading="eager" class="image-element" sizes="180px" itemprop="logo" style="object-fit: contain;">
+                </a>` : "";
+
                 card.innerHTML = `
                 <div class="sku-row">
                     <div class="sku-text">SKU: ${item.SKU || "-"}${item.BRAND ? ` <span class="brand-text">(${item.BRAND})</span>` : ""}</div>
@@ -1434,6 +1441,7 @@
                         <div class="discount-tag">${discountLabel}</div>
                     </div>
                 </div>
+                ${matahariLinkHtml}
             `;
                 resultsContainer.appendChild(card);
             });
@@ -1444,7 +1452,7 @@
             const savedTheme = localStorage.getItem("theme") || "light";
             document.documentElement.setAttribute("data-theme", savedTheme);
             document.getElementById("themeToggle").innerHTML =
-                savedTheme === "dark" ? "☀️ Mode Terang" : "🌙 Mode Gelap";
+                savedTheme === "dark" ? "☀️" : "🌙";
         }
 
         document
@@ -1457,7 +1465,7 @@
                 document.documentElement.setAttribute("data-theme", target);
                 localStorage.setItem("theme", target);
                 document.getElementById("themeToggle").innerHTML =
-                    target === "dark" ? "☀️ Mode Terang" : "🌙 Mode Gelap";
+                    target === "dark" ? "☀️" : "🌙";
             });
 
         dbToggle.addEventListener("click", () => {
