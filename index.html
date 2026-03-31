@@ -2388,7 +2388,7 @@
             container.innerHTML = "";
 
             const filtered = smGroupedList.filter(g => {
-                if (filter === 'u100') return g.minPrice < 100000;
+                if (filter === 'u100') return g.minPrice >= 5000 && g.minPrice < 100000;
                 if (filter === '100-150') return g.minPrice >= 100000 && g.minPrice <= 150000;
                 if (filter === '150-200') return g.minPrice > 150000 && g.minPrice <= 200000;
                 if (filter === 'text') return g.texts.size > 0;
