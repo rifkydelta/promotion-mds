@@ -37,36 +37,27 @@ function updateFolder(baseDir, folderName, timestamp) {
   }
 
   try {
-    const entries = fs.readdirSync(folderPath, { withFileTypes: true });
-    const excelFiles = [];
+    function getAllExcelFiles(currentDir, basePath = "") {
+      let results = [];
+      const items = fs.readdirSync(currentDir, { withFileTypes: true });
 
-    // Scan sub-folder di dalam folder divisi
-    const subFolders = entries.filter((e) => e.isDirectory());
-
-    if (subFolders.length > 0) {
-      subFolders.forEach((subDir) => {
-        const subPath = path.join(folderPath, subDir.name);
-        const subFiles = fs.readdirSync(subPath);
-
-        subFiles.forEach((file) => {
-          const ext = path.extname(file).toLowerCase();
-          if (ext === ".xlsx" && !file.startsWith("~$")) {
-            // Simpan sebagai "subfolder/namafile.xlsx"
-            excelFiles.push(`${subDir.name}/${file}`);
+      for (const item of items) {
+        if (item.isDirectory()) {
+          const newBasePath = basePath ? `${basePath}/${item.name}` : item.name;
+          results = results.concat(
+            getAllExcelFiles(path.join(currentDir, item.name), newBasePath)
+          );
+        } else if (item.isFile()) {
+          const ext = path.extname(item.name).toLowerCase();
+          if (ext === ".xlsx" && !item.name.startsWith("~$")) {
+            results.push(basePath ? `${basePath}/${item.name}` : item.name);
           }
-        });
-      });
-    }
-
-    // Juga scan file .xlsx langsung di root folder divisi (jika ada)
-    entries.forEach((e) => {
-      if (e.isFile()) {
-        const ext = path.extname(e.name).toLowerCase();
-        if (ext === ".xlsx" && !e.name.startsWith("~$")) {
-          excelFiles.push(e.name);
         }
       }
-    });
+      return results;
+    }
+
+    const excelFiles = getAllExcelFiles(folderPath);
 
     const outputData = {
       version: timestamp,
@@ -75,11 +66,8 @@ function updateFolder(baseDir, folderName, timestamp) {
 
     fs.writeFileSync(outputJson, JSON.stringify(outputData, null, 2));
 
-    const subFolderCount = subFolders.length;
     console.log(
-      `✅ Update: database/${folderName}/list_files.json | ${excelFiles.length} file` +
-        (subFolderCount > 0 ? ` dari ${subFolderCount} sub-folder` : "") +
-        ".",
+      `✅ Update: database/${folderName}/list_files.json | ${excelFiles.length} file.`
     );
   } catch (err) {
     console.error(`❌ Gagal di folder ${folderName}: ${err.message}`);
