@@ -1,0 +1,1005 @@
+{
+  "meta": {
+    "title": "MDS Promo Searcher — Lifetime Archive & Sunset Statistics",
+    "official_portal_url": "https://storehub.mdsretailing.id",
+    "official_portal_name": "MDS BISA",
+    "snapshot_taken_at": "2026-09-01T08:50:27.217Z",
+    "operational_days": 109,
+    "status": "DECOMMISSIONED_MIGRATED_TO_MDS_BISA"
+  },
+  "summary": {
+    "total_searches": 343115,
+    "unique_users": 20477,
+    "total_cities": 92,
+    "first_recorded_at": "2026-05-16T08:12:21.262Z",
+    "last_recorded_at": "2026-09-01T08:49:45.514Z",
+    "total_promo_items_indexed": 453485,
+    "total_uploads_processed": 152,
+    "total_pop_orders": 8
+  },
+  "cities": [
+    {
+      "city": "Semarang",
+      "country": "Indonesia",
+      "lat": -7.26759,
+      "lng": 110.48052,
+      "total_searches": 129513,
+      "unique_users": 7450
+    },
+    {
+      "city": "West Jakarta",
+      "country": "Indonesia",
+      "lat": -6.17274,
+      "lng": 106.77265,
+      "total_searches": 21198,
+      "unique_users": 1120
+    },
+    {
+      "city": "Yogyakarta",
+      "country": "Indonesia",
+      "lat": -7.81317,
+      "lng": 110.37305,
+      "total_searches": 18497,
+      "unique_users": 654
+    },
+    {
+      "city": "Bandung",
+      "country": "Indonesia",
+      "lat": -6.93142,
+      "lng": 107.68303,
+      "total_searches": 14676,
+      "unique_users": 1851
+    },
+    {
+      "city": "Depok",
+      "country": "Indonesia",
+      "lat": -6.3966,
+      "lng": 106.8164,
+      "total_searches": 12280,
+      "unique_users": 1002
+    },
+    {
+      "city": "Bekasi",
+      "country": "Indonesia",
+      "lat": -6.21737,
+      "lng": 106.99766,
+      "total_searches": 11120,
+      "unique_users": 565
+    },
+    {
+      "city": "Surabaya",
+      "country": "Indonesia",
+      "lat": -7.2471,
+      "lng": 112.74377,
+      "total_searches": 11085,
+      "unique_users": 806
+    },
+    {
+      "city": "Cirebon",
+      "country": "Indonesia",
+      "lat": -6.72811,
+      "lng": 108.44715,
+      "total_searches": 10662,
+      "unique_users": 713
+    },
+    {
+      "city": "South Tangerang",
+      "country": "Indonesia",
+      "lat": -6.2915,
+      "lng": 106.70057,
+      "total_searches": 8737,
+      "unique_users": 498
+    },
+    {
+      "city": "Central Jakarta",
+      "country": "Indonesia",
+      "lat": -6.17214,
+      "lng": 106.80528,
+      "total_searches": 8639,
+      "unique_users": 504
+    },
+    {
+      "city": "Bogor",
+      "country": "Indonesia",
+      "lat": -6.51855,
+      "lng": 106.80416,
+      "total_searches": 8505,
+      "unique_users": 18
+    },
+    {
+      "city": "East Jakarta",
+      "country": "Indonesia",
+      "lat": -6.23262,
+      "lng": 106.88397,
+      "total_searches": 6695,
+      "unique_users": 432
+    },
+    {
+      "city": "Jakarta",
+      "country": "Indonesia",
+      "lat": -6.21103,
+      "lng": 106.843,
+      "total_searches": 6542,
+      "unique_users": 158
+    },
+    {
+      "city": "Jatiluhur",
+      "country": "Indonesia",
+      "lat": -6.8956,
+      "lng": 107.6822,
+      "total_searches": 6277,
+      "unique_users": 638
+    },
+    {
+      "city": "Cilacap",
+      "country": "Indonesia",
+      "lat": -7.7311,
+      "lng": 109.0171,
+      "total_searches": 6132,
+      "unique_users": 287
+    },
+    {
+      "city": "Batam",
+      "country": "Indonesia",
+      "lat": 1.13287,
+      "lng": 104.00536,
+      "total_searches": 4670,
+      "unique_users": 251
+    },
+    {
+      "city": "Kota Batam",
+      "country": "Indonesia",
+      "lat": 1.09283,
+      "lng": 104.04788,
+      "total_searches": 4610,
+      "unique_users": 230
+    },
+    {
+      "city": "Jambi City",
+      "country": "Indonesia",
+      "lat": -1.61807,
+      "lng": 103.61177,
+      "total_searches": 4225,
+      "unique_users": 270
+    },
+    {
+      "city": "Pekanbaru",
+      "country": "Indonesia",
+      "lat": 0.53875,
+      "lng": 101.42575,
+      "total_searches": 3798,
+      "unique_users": 317
+    },
+    {
+      "city": "Surakarta",
+      "country": "Indonesia",
+      "lat": -7.56253,
+      "lng": 110.81122,
+      "total_searches": 3520,
+      "unique_users": 266
+    },
+    {
+      "city": "Kendal",
+      "country": "Indonesia",
+      "lat": -6.9339,
+      "lng": 110.19452,
+      "total_searches": 3031,
+      "unique_users": 214
+    },
+    {
+      "city": "Sukabumi",
+      "country": "Indonesia",
+      "lat": -6.92139,
+      "lng": 106.9259,
+      "total_searches": 2330,
+      "unique_users": 261
+    },
+    {
+      "city": "Sukoharjo",
+      "country": "Indonesia",
+      "lat": -7.6142,
+      "lng": 110.8131,
+      "total_searches": 1285,
+      "unique_users": 106
+    },
+    {
+      "city": "Tangerang",
+      "country": "Indonesia",
+      "lat": -6.21169,
+      "lng": 106.64264,
+      "total_searches": 933,
+      "unique_users": 120
+    },
+    {
+      "city": "Medan",
+      "country": "Indonesia",
+      "lat": 3.61191,
+      "lng": 98.67289,
+      "total_searches": 776,
+      "unique_users": 63
+    },
+    {
+      "city": "Kota Jambi",
+      "country": "Indonesia",
+      "lat": -1.62715,
+      "lng": 103.63721,
+      "total_searches": 687,
+      "unique_users": 127
+    },
+    {
+      "city": "Sleman",
+      "country": "Indonesia",
+      "lat": -7.73119,
+      "lng": 110.38293,
+      "total_searches": 648,
+      "unique_users": 45
+    },
+    {
+      "city": "Denpasar",
+      "country": "Indonesia",
+      "lat": -8.64977,
+      "lng": 115.21876,
+      "total_searches": 569,
+      "unique_users": 69
+    },
+    {
+      "city": "Palembang",
+      "country": "Indonesia",
+      "lat": -3.0169,
+      "lng": 104.68733,
+      "total_searches": 514,
+      "unique_users": 86
+    },
+    {
+      "city": "North Jakarta",
+      "country": "Indonesia",
+      "lat": -6.13969,
+      "lng": 106.90892,
+      "total_searches": 393,
+      "unique_users": 62
+    },
+    {
+      "city": "Jepara",
+      "country": "Indonesia",
+      "lat": -6.55094,
+      "lng": 110.76836,
+      "total_searches": 289,
+      "unique_users": 25
+    },
+    {
+      "city": "Kendari",
+      "country": "Indonesia",
+      "lat": -3.9842,
+      "lng": 122.2712,
+      "total_searches": 287,
+      "unique_users": 16
+    },
+    {
+      "city": "Tegal",
+      "country": "Indonesia",
+      "lat": -6.9131,
+      "lng": 109.10633,
+      "total_searches": 271,
+      "unique_users": 46
+    },
+    {
+      "city": "Makassar",
+      "country": "Indonesia",
+      "lat": -5.14507,
+      "lng": 119.43777,
+      "total_searches": 149,
+      "unique_users": 9
+    },
+    {
+      "city": "Kudus",
+      "country": "Indonesia",
+      "lat": -6.80589,
+      "lng": 110.84127,
+      "total_searches": 148,
+      "unique_users": 17
+    },
+    {
+      "city": "Magelang",
+      "country": "Indonesia",
+      "lat": -7.4702,
+      "lng": 110.2213,
+      "total_searches": 148,
+      "unique_users": 1
+    },
+    {
+      "city": "Sidoarjo",
+      "country": "Indonesia",
+      "lat": -7.45337,
+      "lng": 112.72036,
+      "total_searches": 144,
+      "unique_users": 19
+    },
+    {
+      "city": "Pekalongan",
+      "country": "Indonesia",
+      "lat": -6.8882,
+      "lng": 109.6724,
+      "total_searches": 138,
+      "unique_users": 29
+    },
+    {
+      "city": "Purbalingga",
+      "country": "Indonesia",
+      "lat": -7.3896,
+      "lng": 109.371,
+      "total_searches": 108,
+      "unique_users": 40
+    },
+    {
+      "city": "Karanganyar",
+      "country": "Indonesia",
+      "lat": -7.76213,
+      "lng": 109.63193,
+      "total_searches": 104,
+      "unique_users": 13
+    },
+    {
+      "city": "Cibitung",
+      "country": "Indonesia",
+      "lat": -6.2715,
+      "lng": 107.1072,
+      "total_searches": 101,
+      "unique_users": 21
+    },
+    {
+      "city": "Bandar Lampung",
+      "country": "Indonesia",
+      "lat": -5.4204,
+      "lng": 105.2598,
+      "total_searches": 83,
+      "unique_users": 16
+    },
+    {
+      "city": "Singapore",
+      "country": "Singapore",
+      "lat": 1.28999,
+      "lng": 103.84971,
+      "total_searches": 83,
+      "unique_users": 12
+    },
+    {
+      "city": "Mlonggo",
+      "country": "Indonesia",
+      "lat": -6.53333,
+      "lng": 110.7,
+      "total_searches": 70,
+      "unique_users": 10
+    },
+    {
+      "city": "Garut",
+      "country": "Indonesia",
+      "lat": -7.2738,
+      "lng": 107.923,
+      "total_searches": 69,
+      "unique_users": 3
+    },
+    {
+      "city": "Kota Pangkal Pinang",
+      "country": "Indonesia",
+      "lat": -2.0547,
+      "lng": 105.9569,
+      "total_searches": 66,
+      "unique_users": 10
+    },
+    {
+      "city": "Padang",
+      "country": "Indonesia",
+      "lat": -0.8958,
+      "lng": 100.4354,
+      "total_searches": 40,
+      "unique_users": 4
+    },
+    {
+      "city": "Kabupaten Cianjur",
+      "country": "Indonesia",
+      "lat": -6.7725,
+      "lng": 107.0831,
+      "total_searches": 36,
+      "unique_users": 8
+    },
+    {
+      "city": "Bantul",
+      "country": "Indonesia",
+      "lat": -7.8255,
+      "lng": 110.3515,
+      "total_searches": 30,
+      "unique_users": 3
+    },
+    {
+      "city": "Malang",
+      "country": "Indonesia",
+      "lat": -7.9826,
+      "lng": 112.6308,
+      "total_searches": 28,
+      "unique_users": 3
+    },
+    {
+      "city": "Guyangan",
+      "country": "Indonesia",
+      "lat": -6.8643,
+      "lng": 111.1202,
+      "total_searches": 28,
+      "unique_users": 1
+    },
+    {
+      "city": "Taman",
+      "country": "Indonesia",
+      "lat": -6.91391,
+      "lng": 109.41045,
+      "total_searches": 25,
+      "unique_users": 8
+    },
+    {
+      "city": "Creator Card Link",
+      "country": "Social Event",
+      "lat": null,
+      "lng": null,
+      "total_searches": 18,
+      "unique_users": 18
+    },
+    {
+      "city": "Serpong",
+      "country": "Indonesia",
+      "lat": -6.31694,
+      "lng": 106.66417,
+      "total_searches": 17,
+      "unique_users": 4
+    },
+    {
+      "city": "Kedungwuni",
+      "country": "Indonesia",
+      "lat": -6.97038,
+      "lng": 109.64794,
+      "total_searches": 15,
+      "unique_users": 1
+    },
+    {
+      "city": "Kabupaten Bandung",
+      "country": "Indonesia",
+      "lat": -7.0905,
+      "lng": 107.6102,
+      "total_searches": 14,
+      "unique_users": 3
+    },
+    {
+      "city": "Kuningan",
+      "country": "Indonesia",
+      "lat": -7.0131,
+      "lng": 108.45522,
+      "total_searches": 14,
+      "unique_users": 4
+    },
+    {
+      "city": "Baturaden",
+      "country": "Indonesia",
+      "lat": -7.3,
+      "lng": 109.21667,
+      "total_searches": 14,
+      "unique_users": 5
+    },
+    {
+      "city": "Pandak",
+      "country": "Indonesia",
+      "lat": -7.91306,
+      "lng": 110.29361,
+      "total_searches": 13,
+      "unique_users": 1
+    },
+    {
+      "city": "Pati",
+      "country": "Indonesia",
+      "lat": -6.74578,
+      "lng": 111.06516,
+      "total_searches": 12,
+      "unique_users": 3
+    },
+    {
+      "city": "Pugeran Maguwoharjo",
+      "country": "Indonesia",
+      "lat": -7.76738,
+      "lng": 110.42132,
+      "total_searches": 12,
+      "unique_users": 1
+    },
+    {
+      "city": "Temanggung",
+      "country": "Indonesia",
+      "lat": -7.31917,
+      "lng": 110.19278,
+      "total_searches": 11,
+      "unique_users": 2
+    },
+    {
+      "city": "Pariaman",
+      "country": "Indonesia",
+      "lat": -0.61898,
+      "lng": 100.11997,
+      "total_searches": 10,
+      "unique_users": 1
+    },
+    {
+      "city": "Purwokerto",
+      "country": "Indonesia",
+      "lat": -7.42139,
+      "lng": 109.23444,
+      "total_searches": 10,
+      "unique_users": 2
+    },
+    {
+      "city": "Pemalang",
+      "country": "Indonesia",
+      "lat": -6.9361,
+      "lng": 109.4309,
+      "total_searches": 9,
+      "unique_users": 5
+    },
+    {
+      "city": "Klaten",
+      "country": "Indonesia",
+      "lat": -7.7049,
+      "lng": 110.6019,
+      "total_searches": 9,
+      "unique_users": 1
+    },
+    {
+      "city": "Adiwerna",
+      "country": "Indonesia",
+      "lat": -6.9375,
+      "lng": 109.1325,
+      "total_searches": 9,
+      "unique_users": 2
+    },
+    {
+      "city": "Tanjung Pinang",
+      "country": "Indonesia",
+      "lat": 0.91667,
+      "lng": 104.45833,
+      "total_searches": 9,
+      "unique_users": 2
+    },
+    {
+      "city": "Mranggen",
+      "country": "Indonesia",
+      "lat": -7.0268,
+      "lng": 110.5158,
+      "total_searches": 9,
+      "unique_users": 2
+    },
+    {
+      "city": "Gombong",
+      "country": "Indonesia",
+      "lat": -7.58,
+      "lng": 109.55889,
+      "total_searches": 8,
+      "unique_users": 2
+    },
+    {
+      "city": "Magetan",
+      "country": "Indonesia",
+      "lat": -7.65667,
+      "lng": 111.33139,
+      "total_searches": 6,
+      "unique_users": 1
+    },
+    {
+      "city": "Jurong Town",
+      "country": "Singapore",
+      "lat": 1.3342,
+      "lng": 103.7266,
+      "total_searches": 6,
+      "unique_users": 2
+    },
+    {
+      "city": "Sungai Penuh",
+      "country": "Indonesia",
+      "lat": -2.08333,
+      "lng": 101.38333,
+      "total_searches": 5,
+      "unique_users": 3
+    },
+    {
+      "city": "Majalengka",
+      "country": "Indonesia",
+      "lat": -6.83611,
+      "lng": 108.22778,
+      "total_searches": 5,
+      "unique_users": 1
+    },
+    {
+      "city": "Ungaran",
+      "country": "Indonesia",
+      "lat": -7.11994,
+      "lng": 110.40476,
+      "total_searches": 5,
+      "unique_users": 2
+    },
+    {
+      "city": "Weru",
+      "country": "Indonesia",
+      "lat": -6.711,
+      "lng": 108.5037,
+      "total_searches": 4,
+      "unique_users": 2
+    },
+    {
+      "city": "Sidakaya",
+      "country": "Indonesia",
+      "lat": -7.5753,
+      "lng": 108.864,
+      "total_searches": 3,
+      "unique_users": 1
+    },
+    {
+      "city": "Vancouver",
+      "country": "Canada",
+      "lat": 49.2476,
+      "lng": -123.1234,
+      "total_searches": 3,
+      "unique_users": 1
+    },
+    {
+      "city": "Serang",
+      "country": "Indonesia",
+      "lat": -6.1363,
+      "lng": 106.1612,
+      "total_searches": 3,
+      "unique_users": 1
+    },
+    {
+      "city": "Purwodadi",
+      "country": "Indonesia",
+      "lat": -7.0868,
+      "lng": 110.9158,
+      "total_searches": 3,
+      "unique_users": 1
+    },
+    {
+      "city": "Jatibarang",
+      "country": "Indonesia",
+      "lat": -6.47472,
+      "lng": 108.31528,
+      "total_searches": 3,
+      "unique_users": 1
+    },
+    {
+      "city": "Sragen",
+      "country": "Indonesia",
+      "lat": -7.4158,
+      "lng": 110.9625,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Kudukeras",
+      "country": "Indonesia",
+      "lat": -6.7133,
+      "lng": 111.1494,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Madiun",
+      "country": "Indonesia",
+      "lat": -7.6302,
+      "lng": 111.5266,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Bypassed by AdBlocker",
+      "country": "Indonesia",
+      "lat": null,
+      "lng": null,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Winong",
+      "country": "Indonesia",
+      "lat": -6.7445,
+      "lng": 111.0305,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Subang",
+      "country": "Indonesia",
+      "lat": -6.57,
+      "lng": 107.75667,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Cimahi",
+      "country": "Indonesia",
+      "lat": -6.87222,
+      "lng": 107.5425,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Balikpapan",
+      "country": "Indonesia",
+      "lat": -1.2509,
+      "lng": 116.8845,
+      "total_searches": 2,
+      "unique_users": 1
+    },
+    {
+      "city": "Demak",
+      "country": "Indonesia",
+      "lat": -6.8909,
+      "lng": 110.6396,
+      "total_searches": 1,
+      "unique_users": 1
+    },
+    {
+      "city": "Deudeul",
+      "country": "Indonesia",
+      "lat": -7.431,
+      "lng": 108.0273,
+      "total_searches": 1,
+      "unique_users": 1
+    },
+    {
+      "city": "Kecamatan Sekernan",
+      "country": "Indonesia",
+      "lat": -1.38757,
+      "lng": 103.41947,
+      "total_searches": 1,
+      "unique_users": 1
+    }
+  ],
+  "monthly_timeline": [
+    {
+      "month_code": "2026-05",
+      "label": "Mei 2026",
+      "short_label": "Mei '26",
+      "total_searches": 45356,
+      "unique_users": 3061
+    },
+    {
+      "month_code": "2026-06",
+      "label": "Juni 2026",
+      "short_label": "Jun '26",
+      "total_searches": 86961,
+      "unique_users": 5601
+    },
+    {
+      "month_code": "2026-07",
+      "label": "Juli 2026",
+      "short_label": "Jul '26",
+      "total_searches": 91615,
+      "unique_users": 6123
+    },
+    {
+      "month_code": "2026-08",
+      "label": "Agustus 2026",
+      "short_label": "Agu '26",
+      "total_searches": 118267,
+      "unique_users": 8811
+    },
+    {
+      "month_code": "2026-09",
+      "label": "September 2026",
+      "short_label": "Sep '26",
+      "total_searches": 916,
+      "unique_users": 159
+    }
+  ],
+  "recent_daily_trend": [
+    {
+      "date_val": "2026-08-19",
+      "date_label": "19 Aug",
+      "total_searches": 4453,
+      "unique_users": 328
+    },
+    {
+      "date_val": "2026-08-20",
+      "date_label": "20 Aug",
+      "total_searches": 6140,
+      "unique_users": 322
+    },
+    {
+      "date_val": "2026-08-21",
+      "date_label": "21 Aug",
+      "total_searches": 4007,
+      "unique_users": 362
+    },
+    {
+      "date_val": "2026-08-22",
+      "date_label": "22 Aug",
+      "total_searches": 4179,
+      "unique_users": 452
+    },
+    {
+      "date_val": "2026-08-23",
+      "date_label": "23 Aug",
+      "total_searches": 3597,
+      "unique_users": 415
+    },
+    {
+      "date_val": "2026-08-24",
+      "date_label": "24 Aug",
+      "total_searches": 2557,
+      "unique_users": 364
+    },
+    {
+      "date_val": "2026-08-25",
+      "date_label": "25 Aug",
+      "total_searches": 3089,
+      "unique_users": 430
+    },
+    {
+      "date_val": "2026-08-26",
+      "date_label": "26 Aug",
+      "total_searches": 3124,
+      "unique_users": 283
+    },
+    {
+      "date_val": "2026-08-27",
+      "date_label": "27 Aug",
+      "total_searches": 4539,
+      "unique_users": 353
+    },
+    {
+      "date_val": "2026-08-28",
+      "date_label": "28 Aug",
+      "total_searches": 6677,
+      "unique_users": 366
+    },
+    {
+      "date_val": "2026-08-29",
+      "date_label": "29 Aug",
+      "total_searches": 3414,
+      "unique_users": 407
+    },
+    {
+      "date_val": "2026-08-30",
+      "date_label": "30 Aug",
+      "total_searches": 3232,
+      "unique_users": 392
+    },
+    {
+      "date_val": "2026-08-31",
+      "date_label": "31 Aug",
+      "total_searches": 2000,
+      "unique_users": 290
+    },
+    {
+      "date_val": "2026-09-01",
+      "date_label": "01 Sep",
+      "total_searches": 916,
+      "unique_users": 159
+    }
+  ],
+  "top_skus": [
+    {
+      "sku": "68049136",
+      "count": 138,
+      "last_searched": "2026-08-29T12:53:57.191Z"
+    },
+    {
+      "sku": "6126",
+      "count": 119,
+      "last_searched": "2026-08-09T06:52:03.012Z"
+    },
+    {
+      "sku": "22642848",
+      "count": 115,
+      "last_searched": "2026-08-27T08:23:58.462Z"
+    },
+    {
+      "sku": "68048404",
+      "count": 111,
+      "last_searched": "2026-08-24T10:00:31.799Z"
+    },
+    {
+      "sku": "6127",
+      "count": 111,
+      "last_searched": "2026-07-10T09:35:13.459Z"
+    },
+    {
+      "sku": "6804",
+      "count": 106,
+      "last_searched": "2026-07-18T07:22:25.471Z"
+    },
+    {
+      "sku": "6150",
+      "count": 105,
+      "last_searched": "2026-07-09T07:26:17.124Z"
+    },
+    {
+      "sku": "61620833",
+      "count": 99,
+      "last_searched": "2026-08-27T05:21:30.217Z"
+    },
+    {
+      "sku": "68049127",
+      "count": 97,
+      "last_searched": "2026-09-01T08:02:30.791Z"
+    },
+    {
+      "sku": "6106",
+      "count": 97,
+      "last_searched": "2026-07-10T04:04:08.122Z"
+    },
+    {
+      "sku": "68049092",
+      "count": 96,
+      "last_searched": "2026-08-28T05:43:34.531Z"
+    },
+    {
+      "sku": "68049083",
+      "count": 96,
+      "last_searched": "2026-08-24T10:26:55.605Z"
+    },
+    {
+      "sku": "6815",
+      "count": 95,
+      "last_searched": "2026-08-26T09:10:35.567Z"
+    },
+    {
+      "sku": "5785",
+      "count": 93,
+      "last_searched": "2026-07-09T04:34:00.718Z"
+    },
+    {
+      "sku": "68048397",
+      "count": 93,
+      "last_searched": "2026-08-28T11:16:17.138Z"
+    },
+    {
+      "sku": "52413351",
+      "count": 92,
+      "last_searched": "2026-08-31T08:57:14.348Z"
+    },
+    {
+      "sku": "82763186",
+      "count": 89,
+      "last_searched": "2026-09-01T08:46:15.338Z"
+    },
+    {
+      "sku": "27028959",
+      "count": 87,
+      "last_searched": "2026-09-01T08:34:48.442Z"
+    },
+    {
+      "sku": "51935101",
+      "count": 87,
+      "last_searched": "2026-08-31T12:30:17.253Z"
+    },
+    {
+      "sku": "33038874",
+      "count": 84,
+      "last_searched": "2026-08-31T05:11:08.457Z"
+    }
+  ],
+  "divisions": [
+    {
+      "division_id": 1,
+      "name": "Ladies (Divisi 1)",
+      "count": 14
+    },
+    {
+      "division_id": 2,
+      "name": "Shoes (Divisi 2)",
+      "count": 1
+    },
+    {
+      "division_id": 3,
+      "name": "Men (Divisi 3)",
+      "count": 6
+    },
+    {
+      "division_id": 4,
+      "name": "Children (Divisi 4)",
+      "count": 13
+    }
+  ]
+}
